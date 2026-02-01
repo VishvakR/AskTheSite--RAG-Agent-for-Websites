@@ -1,0 +1,10 @@
+[project]
+name = "AskTheSite-RAG_agent_for_websites_data"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "chromadb>=1.4.1",
+    "ipykernel>=7.1.0",
+]
