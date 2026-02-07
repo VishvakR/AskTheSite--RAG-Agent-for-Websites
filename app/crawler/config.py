@@ -1,54 +1,52 @@
 from crawl4ai import (
-    BrowserConfig, 
-    CrawlerRunConfig, 
-    CacheMode, 
-    DefaultMarkdownGenerator
+    BrowserConfig,
+    CrawlerRunConfig,
+    CacheMode,
+    DefaultMarkdownGenerator,
 )
 from crawl4ai.content_filter_strategy import PruningContentFilter
 
-class CrawlerConfig:
-    def __init__(
-            self,
-            filter_text: bool = None,
-            filter_link: bool = None,
-            browser_config = None,
-            md_generator = None,
-            crawl_run_config = None,
-            content_filter = None
-        ) :
 
-        # Set up Markdown Generator
+class Crawl4AIConfig:
+    def __init__(
+        self,
+        filter_text=None,
+        filter_links=None,
+        md_generator=None,
+        browser_config=None,
+        crawl_config=None,
+        content_filter=None,
+    ):
+
         if md_generator is None:
             self.md_generator = DefaultMarkdownGenerator(
-                options={
-                    "ignore_links" : False,
-                    "protect_links" : False,
-                },
-                content_filter= (PruningContentFilter(threshold=0.6) 
-                                 if content_filter is None else content_filter)
+                options={"ignore_links": False, "protect_links": False},
+                content_filter=(
+                    PruningContentFilter(threshold=0.6)
+                    if content_filter is None
+                    else content_filter
+                ),
             )
         else:
             self.md_generator = md_generator
 
-        # Set up Browser Configuration
         if browser_config is None:
             self.browser_config = BrowserConfig(
-                headless=True,
-                verbose=False
+                verbose=True,
+                headless=False,
             )
         else:
             self.browser_config = browser_config
 
-        # Set up Crawl Run Configuration
-        if crawl_run_config is None:
-            self.crawl_run_config = CrawlerRunConfig(
+        if crawl_config is None:
+            self.crawl_config = CrawlerRunConfig(
                 markdown_generator=self.md_generator,
                 cache_mode=CacheMode.BYPASS,
             )
         else:
-            self.crawl_run_config = crawl_run_config
-            
-        # Set up content filtering options
-        self.filter_text = filter_text
-        self.filter_link = filter_link
+            self.crawl_config = crawl_config
 
+        # self.filter_text = filter_text
+        # self.filter_links = filter_links
+        self.filter_links = filter_links or (lambda x: True)
+        self.filter_text = filter_text or (lambda x: x)

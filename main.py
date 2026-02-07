@@ -40,16 +40,18 @@
 #     asyncio.run(main())
 
 
-from app.crawler.url_manager import URLManager
+import asyncio
+from app.crawler.urlUtils import URLUtils
+from app.crawler.main import WebCrawler
 
 def test_extract_domain():
     url = "https://www.example.com/path/to/page?query=123#section"
-    domain = URLManager.extract_domain(url)
+    domain = URLUtils.extract_domain(url)
     assert domain == "https://www.example.com"
 
 def test_normalize_url():
     url = "https://www.example.com/path/to/page?query=123#section"
-    normalized = URLManager.normalize_url(url)
+    normalized = URLUtils.normalize_url(url)
     assert normalized == "https://www.example.com/path/to/page"
 
 def test_is_valid_url():
@@ -58,19 +60,24 @@ def test_is_valid_url():
     invalid_url_2 = "https://www.example.com/image.jpg"
     invalid_url_3 = "www.example.com/no-scheme"
 
-    assert URLManager.is_valid_url(valid_url) == True
-    assert URLManager.is_valid_url(invalid_url_1) == False
-    assert URLManager.is_valid_url(invalid_url_2) == False
-    assert URLManager.is_valid_url(invalid_url_3) == False
+    assert URLUtils.is_valid_url(valid_url) == True
+    assert URLUtils.is_valid_url(invalid_url_1) == False
+    assert URLUtils.is_valid_url(invalid_url_2) == False
+    assert URLUtils.is_valid_url(invalid_url_3) == False
 
 
 
 
-def main():
+async def main():
     test_extract_domain()
     test_normalize_url()
     test_is_valid_url()
     print("All tests passed!")
+    crawler = WebCrawler()
+    await crawler.get_page_data(
+            url="https://www.geeksforgeeks.org/machine-learning/machine-learning/",
+            folder="data",
+        )
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
