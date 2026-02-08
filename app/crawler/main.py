@@ -1,61 +1,3 @@
-# import os
-# import json
-# from typing import List, Set
-# from collections import deque
-# import hashlib
-# import asyncio
-
-# from app.crawler.config import CrawlerConfig
-# from app.crawler import URLManager
-# from crawl4ai import AsyncWebCrawler
-
-# class Crawler:
-#     def __init__(self, crawl_config = None, politeness = 2, max_concurrent = 10):
-#         self.crawl_config = crawl_config or CrawlerConfig()
-#         self.politeness = politeness
-#         self.max_concurrent = max_concurrent
-
-        
-#     async def get_page_urls(self, url: str, filename: str, same_dir = True) -> List[str]:
-#         """Crawl a URL and extract all page URLs.
-
-#         Args:
-#             url (str): The starting URL to crawl.
-#             filename (str): The file to save the extracted URLs.
-#             same_dir (bool): Whether to restrict URLs to the same directory.
-#         Returns:
-#                 List[str]: A list of extracted page URLs.
-#         """
-#         async with AsyncWebCrawler(
-#             config= self.crawl_config.browser_config,
-#         ) as crawler:
-#             result = await crawler.arun(
-#                 url=url, config=self.crawl_config.crawl_run_config
-#             )
-
-#             if result.success:
-#                 filename = f"""./data/{filename}.jsonl"""
-
-#                 if len(result.links.get("internal")):
-#                     internal_links = result.links.get("internal")
-
-#                     filtered_links = [
-#                         link["href"]
-#                         for link in internal_links
-#                         if self.crawl_config.filter_links(link.get("href", ""))
-#                     ]
-
-#                     with open(filename, "a", encoding="utf-8") as f:
-#                         for link in filtered_links:
-#                             json_line = json.dumps(link)
-#                             f.write(f"{json_line}\n")
-#                 else:
-#                     link = self.crawl_config.filter_links(
-#                         result.markdown_v2.raw_markdown
-#                     )
-#                     with open(filename, "a") as f:
-#                         f.write(json.dumps(link))
-
 import asyncio
 import os
 import json
@@ -67,7 +9,7 @@ from crawl4ai import (
     AsyncWebCrawler,
 )
 
-from app.crawler.config import Crawl4AIConfig
+from app.crawler.config import CrawlConfig
 from app.crawler.sitemeta import SitemapCrawler, RobotsHandler
 from app.crawler import URLUtils
 
@@ -80,7 +22,7 @@ class WebCrawler:
         self.robots_handler = RobotsHandler()
         self.politeness = politness
         self.max_concurrent = max_concurrent
-        self.crawler_config = Crawl4AIConfig()
+        self.crawler_config = CrawlConfig()
 
         if crawler_config:
             self.crawler_config = crawler_config

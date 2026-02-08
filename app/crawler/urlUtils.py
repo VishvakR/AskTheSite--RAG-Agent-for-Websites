@@ -18,7 +18,7 @@ EXCLUDED_EXTENSIONS = [
 ]
 
 
-class URLUtils:
+class URLConfig:
     @staticmethod
     def extract_domain(url: str) -> str:
         """Extract domain from a URL."""

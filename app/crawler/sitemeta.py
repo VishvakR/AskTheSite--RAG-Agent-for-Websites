@@ -3,12 +3,21 @@ from collections import deque
 from typing import List, Set
 from xml.etree import ElementTree
 
-from app.crawler import URLUtils
-
+from app.crawler import URLConfig
 
 class SitemapCrawler:
+    def __init__(self):
+        pass
+    
+    # Fetch and parse the sitemap, returning a list of URLs.
     def parse_sitemap(self, sitemap_url: str) -> List[str]:
-        """Get URLs from sitemap."""
+        """
+        Fetches the sitemap XML from the given URL and extracts all URLs listed in it.
+        Args:
+            sitemap_url (str): The URL of the sitemap to parse.
+        Returns:
+            List[str]: A list of URLs extracted from the sitemap.
+        """
         try:
             response = requests.get(sitemap_url)
             response.raise_for_status()
@@ -18,49 +27,31 @@ class SitemapCrawler:
         except Exception as e:
             print(f"Error fetching sitemap: {e}")
             return []
-
+    
+    # Crawl the sitemap and return a set of all URLs found.
     def crawl_sitemap(self, url: str) -> Set[str]:
-        """Crawl the sitemap for all links, handling nested .xml sitemaps."""
-        visited = set()
-        all_urls = set()
-        queue = deque([URLUtils.extract_domain(url) + "/sitemap.xml"])
+        """
+        Crawl the sitemap starting from the given URL and return a set of all URLs found.
+        Args:
+            url (str): The URL of the sitemap to crawl.
+        Returns:
+            Set[str]: A set of URLs found in the sitemap.
+        """
 
+        visited = set()
+        all_url = set()
+
+        queue = deque([URLConfig.extract_domain(url) + '/sitemap.xml'])
         while queue:
-            current_sitemap = queue.pop()
-            if current_sitemap in visited:
+            current_url = url = queue.pop()
+            if current_url in visited:
                 continue
-            visited.add(current_sitemap)
-            links = self.parse_sitemap(current_sitemap)
+            visited.add(current_url)
+            links = self.parse_sitemap(current_url)
             for link in links:
-                if link.endswith(".xml"):
+                if link.endswith('.xml') and link not in visited:
                     queue.append(link)
                 else:
-                    all_urls.add(link)
-        return all_urls
+                    all_url.add(link)
+        return all_url
 
-
-class RobotsHandler:
-    def parse_robotstxt(self, robots_url: str) -> List[str]:
-        """Get disallowed URLs from robots.txt."""
-        domain = URLUtils.extract_domain(robots_url)
-        disallowed_urls = []
-        try:
-            response = requests.get(robots_url, timeout=10)
-            response.raise_for_status()
-            for line in response.text.splitlines():
-                line = line.split("#", 1)[0].strip()
-                if line.lower().startswith("disallow:"):
-                    parts = line.split(":", 1)
-                    if len(parts) > 1:
-                        path = parts[1].strip()
-                        if path:
-                            disallowed_urls.append(f"{domain}{path}")
-        except requests.RequestException as e:
-            print(f"Error fetching robots.txt: {e}")
-        return disallowed_urls
-
-    def crawl_robotstxt(self, url: str) -> Set[str]:
-        """Crawl the robots.txt for disallowed links."""
-        domain = URLUtils.extract_domain(url)
-        robots_url = f"{domain}/robots.txt"
-        return set(self.parse_robotstxt(robots_url))
