@@ -7,46 +7,44 @@ from crawl4ai import (
 from crawl4ai.content_filter_strategy import PruningContentFilter
 
 
-class Crawl4AIConfig:
+class CrawlConfig:
     def __init__(
-        self,
-        filter_text=None,
-        filter_links=None,
-        md_generator=None,
-        browser_config=None,
-        crawl_config=None,
-        content_filter=None,
+            self,
+            browser_config=None,
+            crawl_config=None,
+            filter_links=None,
+            md_generator=None,
+            content_filter_strategy=None
     ):
-
-        if md_generator is None:
-            self.md_generator = DefaultMarkdownGenerator(
-                options={"ignore_links": False, "protect_links": False},
-                content_filter=(
-                    PruningContentFilter(threshold=0.6)
-                    if content_filter is None
-                    else content_filter
-                ),
-            )
-        else:
-            self.md_generator = md_generator
-
+        # Configuring the browser is browser config is not provided
         if browser_config is None:
             self.browser_config = BrowserConfig(
-                verbose=True,
                 headless=False,
+                verbose=True
             )
         else:
             self.browser_config = browser_config
 
+        # Configuring the Markdown generator is md_generator is not provided
+        if md_generator is None:
+            self.md_generator = DefaultMarkdownGenerator(
+                options={
+                    "ignore_links": False, 
+                    "protect_links": False
+                },
+                content_filter=PruningContentFilter(threshold=0.6) 
+                if content_filter_strategy is None 
+                else content_filter_strategy
+            )
+        else:
+            self.md_generator = md_generator
+        
+        # Configuring the CrawlerRunConfig is crawl_config is not provided
         if crawl_config is None:
             self.crawl_config = CrawlerRunConfig(
-                markdown_generator=self.md_generator,
                 cache_mode=CacheMode.BYPASS,
+                markdown_generator=self.md_generator
             )
         else:
             self.crawl_config = crawl_config
-
-        # self.filter_text = filter_text
-        # self.filter_links = filter_links
-        self.filter_links = filter_links or (lambda x: True)
-        self.filter_text = filter_text or (lambda x: x)
+        
