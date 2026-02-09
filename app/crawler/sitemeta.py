@@ -43,7 +43,7 @@ class SitemapCrawler:
 
         queue = deque([URLConfig.extract_domain(url) + '/sitemap.xml'])
         while queue:
-            current_url = url = queue.pop()
+            current_url = queue.pop()
             if current_url in visited:
                 continue
             visited.add(current_url)
@@ -55,3 +55,47 @@ class SitemapCrawler:
                     all_url.add(link)
         return all_url
 
+class RobotsTextCrawler:
+    def __init__(self):
+        pass
+    
+    # Fetch and parse the robots.txt file, returning a list of disallowed paths.
+    def parse_robots_txt(self, url: str) -> List[str]:
+        """
+        Fetches the robots.txt file from the given URL and extracts all disallowed paths.
+        Args:
+            url (str): The URL of the website to fetch the robots.txt from.
+        Returns:
+            List[str]: A list of disallowed paths extracted from the robots.txt file.
+        """
+        domain = URLConfig.extract_domain(url)
+        disallowed_paths = []
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            for line in response.text.splitlines():
+                line = line.split("#", 1)[0].strip()  # Remove comments and whitespace
+                if line.lower().startswith("disallow:"):
+                    parts = line.split(":", 1)
+                    if len(parts) > 1:
+                        path = parts[1].strip()
+                        if path:
+                            disallowed_paths.append(f"{domain}{path}")
+        except requests.RequestException as e:
+            print(f"Error fetching robots.txt: {e}")
+        return disallowed_paths
+    
+    # Crawl the robots.txt for disallowed links.
+    def robot_crawl(self, url: str) -> Set[str]:
+        """
+        Crawl the robots.txt file starting from the given URL and return a set of all disallowed URLs.
+        Args:
+            url (str): The URL of the website to crawl the robots.txt from.
+        Returns:
+            Set[str]: A set of disallowed URLs found in the robots.txt file.
+        """
+
+        domain = URLConfig.extract_domain(url)
+        robot_url = f"{domain}/robots.txt"
+        return set(self.parse_robots_txt(robot_url))
+            
