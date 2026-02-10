@@ -98,4 +98,6 @@ class RobotsTextCrawler:
         domain = URLConfig.extract_domain(url)
         robot_url = f"{domain}/robots.txt"
         return set(self.parse_robots_txt(robot_url))
+
+# just need to commit the file in github so i need to write this linne of sentence in this cod4e
             
