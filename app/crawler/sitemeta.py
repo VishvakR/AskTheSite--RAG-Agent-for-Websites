@@ -1,9 +1,13 @@
 import requests
 from collections import deque
-from typing import List, Set
+from typing import List, Set, Dict
 from xml.etree import ElementTree
-
+import urllib.robotparser
+from urllib.parse import urlparse
+import logging
 from app.crawler import URLConfig
+
+logger = logging.getLogger(__name__)
 
 class SitemapCrawler:
     def __init__(self):
@@ -55,47 +59,59 @@ class SitemapCrawler:
                     all_url.add(link)
         return all_url
 
-class RobotsTextCrawler:
-    def __init__(self):
-        pass
-    
-    # Fetch and parse the robots.txt file, returning a list of disallowed paths.
-    def parse_robots_txt(self, url: str) -> List[str]:
-        """
-        Fetches the robots.txt file from the given URL and extracts all disallowed paths.
-        Args:
-            url (str): The URL of the website to fetch the robots.txt from.
-        Returns:
-            List[str]: A list of disallowed paths extracted from the robots.txt file.
-        """
-        domain = URLConfig.extract_domain(url)
-        disallowed_paths = []
-        try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            for line in response.text.splitlines():
-                line = line.split("#", 1)[0].strip()  # Remove comments and whitespace
-                if line.lower().startswith("disallow:"):
-                    parts = line.split(":", 1)
-                    if len(parts) > 1:
-                        path = parts[1].strip()
-                        if path:
-                            disallowed_paths.append(f"{domain}{path}")
-        except requests.RequestException as e:
-            print(f"Error fetching robots.txt: {e}")
-        return disallowed_paths
-    
-    # Crawl the robots.txt for disallowed links.
-    def robot_crawl(self, url: str) -> Set[str]:
-        """
-        Crawl the robots.txt file starting from the given URL and return a set of all disallowed URLs.
-        Args:
-            url (str): The URL of the website to crawl the robots.txt from.
-        Returns:
-            Set[str]: A set of disallowed URLs found in the robots.txt file.
-        """
+class RobotsHandler:
+    def __init__(self, user_agent: str = "*"):
+        self.user_agent = user_agent
+        self.parsers: Dict[str, urllib.robotparser.RobotFileParser] = {}
+        self.crawl_delays: Dict[str, float] = {}
 
-        domain = URLConfig.extract_domain(url)
-        robot_url = f"{domain}/robots.txt"
-        return set(self.parse_robots_txt(robot_url))
+    def _get_domain(self, url: str) -> str:
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    def load(self, url: str):
+        domain = self._get_domain(url)
+
+        if domain in self.parsers:
+            return
+
+        robots_url = f"{domain}/robots.txt"
+
+        rp = urllib.robotparser.RobotFileParser()
+        rp.set_url(robots_url)
+
+        try:
+            rp.read()
+            self.parsers[domain] = rp
+
+            delay = rp.crawl_delay(self.user_agent)
+            if delay:
+                self.crawl_delays[domain] = delay
+
+            logger.info(f"Loaded robots.txt for {domain}")
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to load robots.txt for {domain}: {e}. "
+                "Failing open (allowing crawl)."
+            )
+
+            self.parsers[domain] = None
+    def is_allowed(self, url: str) -> bool:
+        domain = self._get_domain(url)
+
+        if domain not in self.parsers:
+            self.load(url)
+
+        rp = self.parsers.get(domain)
+
+        # If robots failed to load → allow crawl
+        if rp is None:
+            return True
+
+        return rp.can_fetch(self.user_agent, url)
+
+    def get_crawl_delay(self, url: str) -> float:
+        domain = self._get_domain(url)
+        return self.crawl_delays.get(domain, 0)
 
