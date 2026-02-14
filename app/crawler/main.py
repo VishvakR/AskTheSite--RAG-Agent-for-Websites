@@ -80,3 +80,103 @@ class WebCrawler:
         except Exception:
             logger.exception(f"Unexpected error while crawling {url}")
             return set()
+
+    async def get_website_urls(
+        self,
+        url: str,
+        same_origin: bool = True,
+        max_depth: int = 5,
+        max_urls: int = 1000,
+    ) -> Set[str]:
+        """Crawl a website using BFS and return discovered URLs."""
+
+        logger = logging.getLogger(__name__)
+
+        site_urls = set()
+        seen_urls = set()
+        orig_domain = self.url_config.extract_domain(url)
+
+        queue = deque([(url, 0)])
+
+        async with AsyncWebCrawler(
+            config=self.crawl_config.browser_config
+        ) as crawler:
+
+            while queue and len(site_urls) < max_urls:
+
+                curr_url, depth = queue.popleft()
+
+                # Depth & duplicate check
+                if depth > max_depth:
+                    continue
+
+                normalized_curr = self.url_config.normalize_url(curr_url)
+
+                if normalized_curr in seen_urls:
+                    continue
+
+                seen_urls.add(normalized_curr)
+
+                # Robots check
+                self.robots_handler.load(normalized_curr)
+
+                if not self.robots_handler.is_allowed(normalized_curr):
+                    logger.warning(f"Blocked by robots.txt: {normalized_curr}")
+                    continue
+
+                # Respect crawl-delay
+                delay = self.robots_handler.get_crawl_delay(normalized_curr)
+                if delay:
+                    await asyncio.sleep(delay)
+
+                logger.info(f"Crawling depth={depth}: {normalized_curr}")
+
+                try:
+                    result = await crawler.arun(
+                        url=normalized_curr,
+                        config=self.crawl_config.crawl_config,
+                    )
+
+                    if not result.success:
+                        logger.error(
+                            f"Failed to crawl {normalized_curr}: {result.error}"
+                        )
+                        continue
+
+                    internal_links = result.links.get("internal", [])
+
+                    for link in internal_links:
+
+                        href = link.get("href")
+                        if not href:
+                            continue
+
+                        normalized = self.url_config.normalize_url(href)
+
+                        if not self.url_config.is_valid_url(normalized):
+                            continue
+
+                        if normalized in site_urls:
+                            continue
+
+                        site_urls.add(normalized)
+
+                        # Same-origin restriction
+                        if (
+                            not same_origin
+                            or self.url_config.extract_domain(normalized)
+                            == orig_domain
+                        ):
+                            queue.append((normalized, depth + 1))
+
+                        if len(site_urls) >= max_urls:
+                            break
+
+                except Exception:
+                    logger.exception(
+                        f"Exception while crawling {normalized_curr}"
+                    )
+
+        logger.info(f"Discovered {len(site_urls)} URLs from {url}")
+
+        return site_urls

@@ -88,9 +88,9 @@ import asyncio
 
 async def main():
     crawler = WebCrawler()
-    urls = await crawler.get_page_urls(
+    urls = await crawler.get_website_urls(
         url="https://docs.crawl4ai.com",
-        filename="crawl4ai_docs_links"
+        # filename="crawl4ai_docs_links"
     )
     print(f"Extracted URLs: {urls}")
 
