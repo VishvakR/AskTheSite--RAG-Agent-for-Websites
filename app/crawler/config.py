@@ -14,7 +14,9 @@ class CrawlConfig:
             crawl_config=None,
             filter_links=None,
             md_generator=None,
-            content_filter_strategy=None
+            content_filter_strategy=None,
+            filter_text=None,
+            
     ):
         # Configuring the browser is browser config is not provided
         if browser_config is None:
@@ -47,4 +49,7 @@ class CrawlConfig:
             )
         else:
             self.crawl_config = crawl_config
+
+        self.filter_text = filter_text or (lambda x: x)
+        self.filter_links = filter_links or (lambda x: True)
         
