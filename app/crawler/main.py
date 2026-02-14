@@ -180,3 +180,154 @@ class WebCrawler:
         logger.info(f"Discovered {len(site_urls)} URLs from {url}")
 
         return site_urls
+    
+    async def crawl_parallel(
+        self,
+        urls: List[str],
+        folder: str = None,
+        filename: str = None,
+        append: bool = False,
+    ):
+        """Crawl multiple URLs in parallel with concurrency"""
+
+        logger = logging.getLogger(__name__)
+
+        # Ensure folder exists
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+
+        semaphore = asyncio.Semaphore(self.max_concurrency)
+
+        async with AsyncWebCrawler(
+            config=self.crawl_config.browser_config
+        ) as crawler:
+
+            async def process_url(url: str):
+
+                async with semaphore:
+
+                    try:
+                        # Normalize URL
+                        normalized = self.url_config.normalize_url(url)
+
+                        # Robots handling
+                        self.robots_handler.load(normalized)
+
+                        if not self.robots_handler.is_allowed(normalized):
+                            logger.warning(f"Blocked by robots.txt: {normalized}")
+                            return
+
+                        # Respect crawl-delay
+                        delay = self.robots_handler.get_crawl_delay(normalized)
+                        if delay:
+                            await asyncio.sleep(delay)
+                        else:
+                            await asyncio.sleep(self.politeness)
+
+                        result = await crawler.arun(
+                            url=normalized,
+                            config=self.crawl_config.crawl_config,
+                            session_id="session1",
+                        )
+
+                        if not result.success:
+                            logger.error(
+                                f"Failed to crawl {normalized}: {result.error}"
+                            )
+                            return
+
+                        logger.info(f"Successfully crawled: {normalized}")
+
+                        # Determine filename
+                        if append:
+                            if not filename:
+                                raise ValueError("Filename required when append=True")
+                            file_name = filename
+                        else:
+                            file_name = (
+                                hashlib.sha256(normalized.encode()).hexdigest()[:8]
+                                if not filename
+                                else filename
+                            )
+
+                        if folder:
+                            file_name = os.path.join(folder, file_name)
+
+                        file_path = f"{file_name}.md"
+
+                        # Write file
+                        with open(
+                            file_path,
+                            "a" if append else "w",
+                            encoding="utf-8",
+                        ) as f:
+                            content = result.markdown
+                            f.write(self.crawl_config.filter_text(content))
+
+                    except Exception:
+                        logger.exception(f"Exception while crawling {url}")
+
+            await asyncio.gather(*(process_url(url) for url in urls))
+
+        logger.info(f"Finished crawling {len(urls)} URLs")
+
+    async def get_data(
+        self,
+        url: str,
+        folder: str = None,
+        filename: str = None,
+        append: bool = False,
+    ):
+        """
+        Crawl entire website:
+        - Try sitemap first
+        - Fallback to BFS crawl
+        - Then crawl pages in parallel
+        """
+
+        logger = logging.getLogger(__name__)
+
+        # Step 1: Try sitemap
+        logger.info(f"Checking sitemap for {url}")
+
+        all_urls = self.sitemap_crawler.crawl_sitemap(url)
+
+        # Step 2: If no sitemap → BFS crawl
+        if not all_urls:
+            logger.info("No sitemap found. Falling back to BFS crawl.")
+            all_urls = await self.get_website_urls(url)
+
+        if not all_urls:
+            logger.warning("No URLs discovered.")
+            return
+
+        logger.info(f"Discovered {len(all_urls)} URLs. Starting parallel crawl.")
+
+        # Step 3: Crawl discovered URLs
+        await self.crawl_parallel(
+            urls=list(all_urls),
+            folder=folder,
+            filename=filename,
+            append=append,
+        )
+
+    async def get_page_data(
+        self,
+        url: str,
+        folder: str = None,
+        filename: str = None,
+        append: bool = False,
+    ):
+        """
+        Crawl a single page and save its content.
+        """
+
+        await self.crawl_parallel(
+            urls=[url],
+            folder=folder,
+            filename=filename,
+            append=append,
+        )
+
+
+
