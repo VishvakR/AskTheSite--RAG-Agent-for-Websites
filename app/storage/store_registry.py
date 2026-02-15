@@ -1,5 +1,6 @@
 from typing import Dict, Type
 
+# A registry to manage different store classes
 class StoreRegistry:
     _registry: Dict[str, Type] = {}
 
