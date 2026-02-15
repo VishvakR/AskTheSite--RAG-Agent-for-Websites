@@ -181,6 +181,7 @@ class WebCrawler:
 
         return site_urls
     
+
     async def crawl_parallel(
         self,
         urls: List[str],
@@ -188,88 +189,94 @@ class WebCrawler:
         filename: str = None,
         append: bool = False,
     ):
-        """Crawl multiple URLs in parallel with concurrency"""
+        """Efficient parallel crawl using Crawl4AI arun_many."""
 
         logger = logging.getLogger(__name__)
 
-        # Ensure folder exists
         if folder:
             os.makedirs(folder, exist_ok=True)
 
-        semaphore = asyncio.Semaphore(self.max_concurrency)
+        # Normalize URLs first
+        normalized_urls = [
+            self.url_config.normalize_url(u) for u in urls
+        ]
+
+        # Filter robots BEFORE sending to arun_many
+        allowed_urls = []
+        for url in normalized_urls:
+            self.robots_handler.load(url)
+            if self.robots_handler.is_allowed(url):
+                allowed_urls.append(url)
+            else:
+                logger.warning(f"Blocked by robots.txt: {url}")
+
+        if not allowed_urls:
+            logger.warning("No URLs allowed after robots filtering.")
+            return
 
         async with AsyncWebCrawler(
             config=self.crawl_config.browser_config
         ) as crawler:
 
-            async def process_url(url: str):
+            logger.info(
+                f"Starting parallel crawl of {len(allowed_urls)} URLs"
+            )
 
-                async with semaphore:
+            results = await crawler.arun_many(
+                urls=allowed_urls,
+                config=self.crawl_config.crawl_config,
+            )
 
-                    try:
-                        # Normalize URL
-                        normalized = self.url_config.normalize_url(url)
+            for result in results:
 
-                        # Robots handling
-                        self.robots_handler.load(normalized)
+                try:
+                    url = result.url
 
-                        if not self.robots_handler.is_allowed(normalized):
-                            logger.warning(f"Blocked by robots.txt: {normalized}")
-                            return
+                    if not result.success:
+                        logger.error(
+                            f"Failed to crawl {url}: {result.error}"
+                        )
+                        continue
 
-                        # Respect crawl-delay
-                        delay = self.robots_handler.get_crawl_delay(normalized)
-                        if delay:
-                            await asyncio.sleep(delay)
-                        else:
-                            await asyncio.sleep(self.politeness)
+                    logger.info(f"Successfully crawled: {url}")
 
-                        result = await crawler.arun(
-                            url=normalized,
-                            config=self.crawl_config.crawl_config,
-                            session_id="session1",
+                    # Determine filename
+                    if append:
+                        if not filename:
+                            raise ValueError(
+                                "Filename required when append=True"
+                            )
+                        file_name = filename
+                    else:
+                        file_name = (
+                            hashlib.sha256(url.encode()).hexdigest()[:8]
+                            if not filename
+                            else filename
                         )
 
-                        if not result.success:
-                            logger.error(
-                                f"Failed to crawl {normalized}: {result.error}"
-                            )
-                            return
+                    if folder:
+                        file_name = os.path.join(folder, file_name)
 
-                        logger.info(f"Successfully crawled: {normalized}")
+                    file_path = f"{file_name}.md"
 
-                        # Determine filename
-                        if append:
-                            if not filename:
-                                raise ValueError("Filename required when append=True")
-                            file_name = filename
-                        else:
-                            file_name = (
-                                hashlib.sha256(normalized.encode()).hexdigest()[:8]
-                                if not filename
-                                else filename
-                            )
+                    content = result.markdown
 
-                        if folder:
-                            file_name = os.path.join(folder, file_name)
+                    if not content:
+                        logger.warning(f"No content extracted from {url}")
+                        continue
 
-                        file_path = f"{file_name}.md"
+                    with open(
+                        file_path,
+                        "a" if append else "w",
+                        encoding="utf-8",
+                    ) as f:
+                        f.write(self.crawl_config.filter_text(content))
 
-                        # Write file
-                        with open(
-                            file_path,
-                            "a" if append else "w",
-                            encoding="utf-8",
-                        ) as f:
-                            content = result.markdown
-                            f.write(self.crawl_config.filter_text(content))
+                except Exception:
+                    logger.exception("Error processing crawl result")
 
-                    except Exception:
-                        logger.exception(f"Exception while crawling {url}")
+        logger.info("Parallel crawl completed.")
 
-            await asyncio.gather(*(process_url(url) for url in urls))
-
-        logger.info(f"Finished crawling {len(urls)} URLs")
 
     async def get_data(
         self,
@@ -330,4 +337,94 @@ class WebCrawler:
         )
 
 
+# ---------------------------------------------Another version of crawl_parallel with explicit semaphore control (not using arun_many)---------------------------------------------
 
+# async def crawl_parallel(
+    #     self,
+    #     urls: List[str],
+    #     folder: str = None,
+    #     filename: str = None,
+    #     append: bool = False,
+    # ):
+    #     """Crawl multiple URLs in parallel with concurrency"""
+
+    #     logger = logging.getLogger(__name__)
+
+    #     # Ensure folder exists
+    #     if folder:
+    #         os.makedirs(folder, exist_ok=True)
+
+    #     semaphore = asyncio.Semaphore(self.max_concurrency)
+
+    #     async with AsyncWebCrawler(
+    #         config=self.crawl_config.browser_config
+    #     ) as crawler:
+
+    #         async def process_url(url: str):
+
+    #             async with semaphore:
+
+    #                 try:
+    #                     # Normalize URL
+    #                     normalized = self.url_config.normalize_url(url)
+
+    #                     # Robots handling
+    #                     self.robots_handler.load(normalized)
+
+    #                     if not self.robots_handler.is_allowed(normalized):
+    #                         logger.warning(f"Blocked by robots.txt: {normalized}")
+    #                         return
+
+    #                     # Respect crawl-delay
+    #                     delay = self.robots_handler.get_crawl_delay(normalized)
+    #                     if delay:
+    #                         await asyncio.sleep(delay)
+    #                     else:
+    #                         await asyncio.sleep(self.politeness)
+
+    #                     result = await crawler.arun(
+    #                         url=normalized,
+    #                         config=self.crawl_config.crawl_config,
+    #                         session_id="session1",
+    #                     )
+
+    #                     if not result.success:
+    #                         logger.error(
+    #                             f"Failed to crawl {normalized}: {result.error}"
+    #                         )
+    #                         return
+
+    #                     logger.info(f"Successfully crawled: {normalized}")
+
+    #                     # Determine filename
+    #                     if append:
+    #                         if not filename:
+    #                             raise ValueError("Filename required when append=True")
+    #                         file_name = filename
+    #                     else:
+    #                         file_name = (
+    #                             hashlib.sha256(normalized.encode()).hexdigest()[:8]
+    #                             if not filename
+    #                             else filename
+    #                         )
+
+    #                     if folder:
+    #                         file_name = os.path.join(folder, file_name)
+
+    #                     file_path = f"{file_name}.md"
+
+    #                     # Write file
+    #                     with open(
+    #                         file_path,
+    #                         "a" if append else "w",
+    #                         encoding="utf-8",
+    #                     ) as f:
+    #                         content = result.markdown
+    #                         f.write(self.crawl_config.filter_text(content))
+
+    #                 except Exception:
+    #                     logger.exception(f"Exception while crawling {url}")
+
+    #         await asyncio.gather(*(process_url(url) for url in urls))
+
+    #     logger.info(f"Finished crawling {len(urls)} URLs")
