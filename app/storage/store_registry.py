@@ -6,8 +6,12 @@ class StoreRegistry:
 
     # Register a store class with a given name
     @classmethod
-    def register_store(cls, name: str, store_class: Type):
-        cls._registry[name] = store_class
+    def register_store(cls, store_type: str):
+        def decorator(wrapper_class: Type):
+            cls._registry[store_type.lower()] = wrapper_class
+            return wrapper_class
+        return decorator
+    
 
     # Retrieve a store class by name
     @classmethod
