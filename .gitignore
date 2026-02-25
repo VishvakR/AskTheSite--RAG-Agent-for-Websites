@@ -9,3 +9,4 @@ output/
 .env
 experiments/storage/
 experiments/datas/
+test_main.py

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 
 class MetaDataParser:
-    def __init__(self, llm: LLMManager):
+    def __init__(self, llm):
         self.llm = llm
     
         class MetaDataSchema(BaseModel):
@@ -20,17 +20,43 @@ class MetaDataParser:
 
         self.parser = PydanticOutputParser(pydantic_object=MetaDataSchema)
 
+        self.prompt = ChatPromptTemplate.from_template(
+                """
+                    Extract metadata from the following text.
+
+                    Return output strictly in this JSON format:
+                    {format_instructions}
+
+                    TEXT:
+                    {text}
+                """
+            ).partial(
+                format_instructions=self.parser.get_format_instructions()
+            )
+
     def add_metadata(self, documents: List[Document]) -> List[Document]:
         """Add Metadata to the documents using the LLM"""
+        for doc in documents:
+            response = self.llm.invoke(
+                self.prompt.format(text=doc.page_content)
+            )
+
+            parsed = self.parser.parse(response.content)
+
+            doc.metadata["title"] = parsed.title
+            doc.metadata["summary"] = parsed.summary
+            doc.metadata["keywords"] = parsed.keywords
+
+        return documents
 
 
 
 
-class Document:
+class Documents:
     def __init__(
             self,
             input_files: Union[List[str], str],
-            llm: LLMManager | None = None,
+            llm = None,
             add_metadata: Optional[bool] = False,
         ):
 
@@ -53,8 +79,8 @@ class Document:
         
     def loadd(self) -> List[Document]:
         """Load documents form the directory or from the list of files"""
+        document = []
         if self.files is not None:
-            document = []
             for file in self.files:
                 loader = TextLoader(file)
                 document.extend(loader.load())
@@ -63,8 +89,9 @@ class Document:
         else:
             loader = DirectoryLoader(
                 self.input_dir,
-                glob=self.input_dir + '/**/*.md',
-                show_progress=True
+                glob='**/*.md',
+                loader_cls=TextLoader,
+                show_progress=True,
             )
 
             return loader.load()
