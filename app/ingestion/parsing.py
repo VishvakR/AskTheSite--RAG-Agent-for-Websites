@@ -7,8 +7,6 @@ from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
 
-
-
 class MetaDataParser:
     def __init__(self, llm):
         self.llm = llm
@@ -97,6 +95,7 @@ class Documents:
             return loader.load()
         
     def split(self) -> List[Document]:
+        """Split the documents to chunks"""
         docs = self.loadd()
         return self.text_splitter.split_documents(docs)
     
@@ -107,21 +106,3 @@ class Documents:
             split_docs = self.metadata_parser.add_metadata(split_docs)
         return split_docs
         
-            
-    
-
-    
-
-
-
-
-
-
-
-
-
-    
-
-    
-
-
