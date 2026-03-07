@@ -1,11 +1,12 @@
 import os
 from langchain_chroma import Chroma
 
+from app.storage.main import Store
 from dotenv import load_dotenv
 load_dotenv()
 
 
-class ChromaStore:
+class ChromaStore(Store):
     def __init__(
             self,
             namespace: str,

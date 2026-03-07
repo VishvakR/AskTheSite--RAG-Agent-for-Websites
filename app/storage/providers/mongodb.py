@@ -4,13 +4,14 @@ from pymongo import MongoClient
 
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from app.embeddings.embedding import Embedding
+from app.storage.main import Store
 
 from dotenv import load_dotenv
 load_dotenv()
 
 uri = os.getenv('MONGODB_URI');
 
-class MongoStorage:
+class MongoStorage(Store):
     def __init__(
             self,
             namespace: str,
