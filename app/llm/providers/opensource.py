@@ -16,7 +16,6 @@ class OpenSourceModel:
         )
 
     def generate_response(self, prompt: str) -> str:
-        responce = self.llm.invoke(prompt)
-        return responce.content
-    
+        response = self.llm.invoke(prompt)
+        return response.content
 
