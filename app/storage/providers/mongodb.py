@@ -12,7 +12,7 @@ import logging
 from dotenv import load_dotenv
 load_dotenv()
 
-uri = os.getenv('MONGODB_URI');
+uri = os.getenv('MONGODB_URI')
 
 @StorageFactory.register_store("mongodb")
 class MongoStorage(Store):
@@ -56,3 +56,16 @@ class MongoStorage(Store):
 
     def get_vector_store(self):
         return self.vector_store
+
+    def close(self):
+        """Close the MongoDB client connection."""
+        if self.client:
+            self.client.close()
+            logging.info(f"MongoStorage connection closed for collection: {self.COLLECTION_NAME}")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False

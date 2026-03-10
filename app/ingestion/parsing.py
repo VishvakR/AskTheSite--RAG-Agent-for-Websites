@@ -72,11 +72,11 @@ class Documents:
         self.add_metadata = add_metadata
         if self.add_metadata:
             if llm is None:
-                raise ValueError("LLM is Requirerd to add metadata")
+                raise ValueError("LLM is required to add metadata")
             self.metadata_parser = MetaDataParser(llm)
         
-    def loadd(self) -> List[Document]:
-        """Load documents form the directory or from the list of files"""
+    def load_documents(self) -> List[Document]:
+        """Load documents from the directory or from the list of files."""
         document = []
         if self.files is not None:
             for file in self.files:
@@ -96,11 +96,11 @@ class Documents:
         
     def split(self) -> List[Document]:
         """Split the documents to chunks"""
-        docs = self.loadd()
+        docs = self.load_documents()
         return self.text_splitter.split_documents(docs)
     
     def create_nodes(self) -> List[Document]:
-        """Create nodes form the documents"""
+        """Create nodes from the documents."""
         split_docs = self.split()
         if self.add_metadata:
             split_docs = self.metadata_parser.add_metadata(split_docs)

@@ -1,9 +1,10 @@
 from typing import Optional
 from langchain_openai import OpenAI
+from app.llm.main import LanguageModel
 from app.llm.manager import LanguageModelFactory
 
 @LanguageModelFactory.register("openai")
-class OpenAIModel:
+class OpenAIModel(LanguageModel):
     def __init__(
             self, 
             model_name: str = "gpt-3.5-turbo", 

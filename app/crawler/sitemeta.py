@@ -5,7 +5,7 @@ from xml.etree import ElementTree
 import urllib.robotparser
 from urllib.parse import urlparse
 import logging
-from app.crawler import URLConfig
+from app.crawler.url_utils import URLConfig
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +23,13 @@ class SitemapCrawler:
             List[str]: A list of URLs extracted from the sitemap.
         """
         try:
-            response = requests.get(sitemap_url)
+            response = requests.get(sitemap_url, timeout=15)
             response.raise_for_status()
             root = ElementTree.fromstring(response.content)
             namespace = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
             return [loc.text for loc in root.findall(".//ns:loc", namespace)]
         except Exception as e:
-            print(f"Error fetching sitemap: {e}")
+            logger.warning(f"Error fetching sitemap: {e}")
             return []
     
     # Crawl the sitemap and return a set of all URLs found.

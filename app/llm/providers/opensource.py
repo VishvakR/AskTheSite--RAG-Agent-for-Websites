@@ -1,9 +1,9 @@
-from typing import Optional
 from langchain_ollama import OllamaLLM
+from app.llm.main import LanguageModel
 from app.llm.manager import LanguageModelFactory
 
 @LanguageModelFactory.register("opensource")
-class OpenSourceModel:
+class OpenSourceModel(LanguageModel):
     def __init__(
             self, 
             model_name: str = "llama3.1:8b", 
@@ -19,5 +19,5 @@ class OpenSourceModel:
 
     def generate_response(self, prompt: str) -> str:
         response = self.llm.invoke(prompt)
-        return response.content
+        return response  # OllamaLLM returns a string directly
 

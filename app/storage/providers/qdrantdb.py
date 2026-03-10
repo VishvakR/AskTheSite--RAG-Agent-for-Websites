@@ -52,3 +52,15 @@ class QdrantStorage(Store):
 
     def get_vector_store(self):
         return self.vector_store
+
+    def close(self):
+        """Close the Qdrant client connection."""
+        if self.client:
+            self.client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False

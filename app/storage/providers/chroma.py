@@ -4,10 +4,11 @@ import logging
 
 from app.storage.manager import StorageFactory
 from app.storage.main import Store
+from app.embeddings.embedding import Embedding
 from dotenv import load_dotenv
 load_dotenv()
 
-logging = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 @StorageFactory.register_store("chromadb")
 class ChromaStore(Store):
@@ -16,15 +17,15 @@ class ChromaStore(Store):
             namespace: str,
             persist_dir: str = os.getenv('PERSISTENT_STORAGE'),
         ):
-        logging.info(f"Initializing ChromaStore with namespace: {namespace} and persist_dir: {persist_dir}")
+        logger.info(f"Initializing ChromaStore with namespace: {namespace} and persist_dir: {persist_dir}")
         self.namespace = namespace
         self.persist_dir = persist_dir
 
         self.vector_store = Chroma(
             collection_name=namespace,
-            persist_directory=persist_dir
+            persist_directory=persist_dir,
+            embedding_function=Embedding().get_embedding_function(),
         )
-
 
     def get_vector_store(self):
         return self.vector_store

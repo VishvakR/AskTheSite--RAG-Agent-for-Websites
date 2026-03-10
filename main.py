@@ -1,13 +1,14 @@
-import os
 import asyncio
-import nest_asyncio
 
+from app.logger import Logger
 from app.crawler.main import WebCrawler
 from app.storage import StoreManager
 from app.llm.manager import LLMManager
 from app.ingestion.parsing import Documents
 
-nest_asyncio.apply()
+# Initialize logging
+Logger.setup()
+
 
 async def main():
     crawler = WebCrawler()
@@ -28,13 +29,13 @@ async def main():
 
     # Example 3: Just links from a page
     # await crawler.get_page_urls(
-    #     url="https://docs.crawl4ai.com", 
+    #     url="https://docs.crawl4ai.com",
     #     filename="sample"
     # )
 
     storage = StoreManager.get_or_create(
-        store_type="mongodb",
-        namespace="askthesite",
+        store_type="chromadb",
+        namespace="askthesitee",
     )
 
     llm = LLMManager.create(
@@ -48,7 +49,6 @@ async def main():
     document = Documents(input_files=input_files)
     docs = document.create_nodes()
     storage.get_vector_store().add_documents(docs)
-
 
 
 if __name__ == "__main__":

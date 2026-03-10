@@ -1,14 +1,15 @@
 import logging
 
-class logger:
+
+class Logger:
+    """Centralized logging setup for AskTheSite."""
+
     @staticmethod
-    def setup():
+    def setup(level=logging.INFO):
         logging.basicConfig(
-            level=logging.INFO,
+            level=level,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.StreamHandler()
             ]
         )
-
-        
