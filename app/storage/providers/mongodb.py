@@ -5,12 +5,16 @@ from pymongo import MongoClient
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from app.embeddings.embedding import Embedding
 from app.storage.main import Store
+from app.storage.manager import StorageFactory
+import logging
+
 
 from dotenv import load_dotenv
 load_dotenv()
 
 uri = os.getenv('MONGODB_URI');
 
+@StorageFactory.register_store("mongodb")
 class MongoStorage(Store):
     def __init__(
             self,
@@ -21,7 +25,7 @@ class MongoStorage(Store):
         self.COLLECTION_NAME = namespace
         self.ATLAS_VECTOR_SEARCH_INDEX_NAME = "vector_indexes"
 
-
+        logging.info(f"Initializing MongoStorage with namespace: {namespace} and uri: {uri}")
         self.client = MongoClient(uri,
                                   tls=True,
                                   tlsCAFile=certifi.where()
@@ -48,6 +52,7 @@ class MongoStorage(Store):
                 embedding=Embedding().get_embedding_function(),
                 index_name=self.ATLAS_VECTOR_SEARCH_INDEX_NAME,
             )
+        logging.info(f"MongoStorage initialized successfully with collection: {self.COLLECTION_NAME}")
 
     def get_vector_store(self):
         return self.vector_store

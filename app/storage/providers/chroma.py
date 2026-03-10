@@ -1,17 +1,22 @@
 import os
 from langchain_chroma import Chroma
+import logging
 
+from app.storage.manager import StorageFactory
 from app.storage.main import Store
 from dotenv import load_dotenv
 load_dotenv()
 
+logging = logging.getLogger(__name__)
 
+@StorageFactory.register_store("chromadb")
 class ChromaStore(Store):
     def __init__(
             self,
             namespace: str,
             persist_dir: str = os.getenv('PERSISTENT_STORAGE'),
         ):
+        logging.info(f"Initializing ChromaStore with namespace: {namespace} and persist_dir: {persist_dir}")
         self.namespace = namespace
         self.persist_dir = persist_dir
 

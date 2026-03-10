@@ -5,13 +5,14 @@ from dotenv import load_dotenv
 
 from app.embeddings.embedding import Embedding
 from app.storage.main import Store
+from app.storage.manager import StorageFactory
 
 load_dotenv()
 
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
-
+@StorageFactory.register_store("qdrantdb")
 class QdrantStorage(Store):
     def __init__(
         self,

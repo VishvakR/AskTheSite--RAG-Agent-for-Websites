@@ -1,6 +1,8 @@
 from typing import Optional
 from langchain_openai import OpenAI
+from app.llm.manager import LanguageModelFactory
 
+@LanguageModelFactory.register("openai")
 class OpenAIModel:
     def __init__(
             self, 

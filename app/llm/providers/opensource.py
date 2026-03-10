@@ -1,6 +1,8 @@
 from typing import Optional
 from langchain_ollama import OllamaLLM
+from app.llm.manager import LanguageModelFactory
 
+@LanguageModelFactory.register("opensource")
 class OpenSourceModel:
     def __init__(
             self, 
