@@ -35,11 +35,10 @@ class MetaDataParser:
     def add_metadata(self, documents: List[Document]) -> List[Document]:
         """Add Metadata to the documents using the LLM"""
         for doc in documents:
-            response = self.llm.invoke(
+            response = self.llm.generate_response(
                 self.prompt.format(text=doc.page_content)
             )
-
-            parsed = self.parser.parse(response.content)
+            parsed = self.parser.parse(response)
 
             doc.metadata["title"] = parsed.title
             doc.metadata["summary"] = parsed.summary
