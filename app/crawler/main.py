@@ -28,7 +28,7 @@ class WebCrawler:
 
     async def get_page_urls(self, url: str, filename: str) -> Set[str]:
         """Fetch URLs from the given page URL."""
-        logging.info(f"Extracting URLs from page: {url}")
+        logger.info(f"Extracting URLs from page: {url}")
         os.makedirs("./data", exist_ok=True)
 
         # Load and check robots
@@ -73,7 +73,7 @@ class WebCrawler:
                         json_line = json.dumps({"url": link})
                         f.write(json_line + "\n")
 
-                logging.info(f"Filtered links: {filtered_links}")
+                logger.info(f"Filtered links: {filtered_links}")
 
                 return set(filtered_links)
 
