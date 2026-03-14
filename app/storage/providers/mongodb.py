@@ -12,6 +12,8 @@ import logging
 from dotenv import load_dotenv
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 uri = os.getenv('MONGODB_URI')
 
 @StorageFactory.register_store("mongodb")
@@ -25,7 +27,7 @@ class MongoStorage(Store):
         self.COLLECTION_NAME = namespace
         self.ATLAS_VECTOR_SEARCH_INDEX_NAME = "vector_indexes"
 
-        logging.info(f"Initializing MongoStorage with namespace: {namespace} and uri: {uri}")
+        logger.info(f"Initializing MongoStorage with namespace: {namespace} and uri: {uri}")
         self.client = MongoClient(uri,
                                   tls=True,
                                   tlsCAFile=certifi.where()
@@ -52,7 +54,7 @@ class MongoStorage(Store):
                 embedding=Embedding().get_embedding_function(),
                 index_name=self.ATLAS_VECTOR_SEARCH_INDEX_NAME,
             )
-        logging.info(f"MongoStorage initialized successfully with collection: {self.COLLECTION_NAME}")
+        logger.info(f"MongoStorage initialized successfully with collection: {self.COLLECTION_NAME}")
 
     def get_vector_store(self):
         return self.vector_store
@@ -61,7 +63,7 @@ class MongoStorage(Store):
         """Close the MongoDB client connection."""
         if self.client:
             self.client.close()
-            logging.info(f"MongoStorage connection closed for collection: {self.COLLECTION_NAME}")
+            logger.info(f"MongoStorage connection closed for collection: {self.COLLECTION_NAME}")
 
     def __enter__(self):
         return self

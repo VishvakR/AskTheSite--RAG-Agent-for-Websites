@@ -27,6 +27,6 @@ class ChromaStore(Store):
             embedding_function=Embedding().get_embedding_function(),
         )
 
-    def get_vector_store(self):
+    def get_vector_store(self) -> Chroma:
         return self.vector_store
-    
+        
