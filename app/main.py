@@ -15,12 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class RAGAgent:
-    """
-    High-level orchestrator for the Retrieval-Augmented Generation pipeline.
-
-    Wires together an LLM, a vector store, an index strategy, and optional
-    document ingestion into a single, easy-to-use interface.
-    """
 
     def __init__(
         self,
@@ -57,22 +51,12 @@ class RAGAgent:
     def get_relevant_nodes(self, prompt: str, top_k: int = 5) -> List[Document]:
         """
         Retrieve the most relevant document chunks for *prompt*.
-
-        Args:
-            prompt: User query string.
-            top_k:  Maximum number of documents to return.
-
-        Returns:
-            A list of LangChain Document objects.
         """
         return self.index_manager.query(prompt)
 
     def get_documents(self) -> List[Document]:
         """
         Load and return the raw source documents (before chunking/indexing).
-
-        Raises:
-            ValueError: If no document handler was provided at construction.
         """
         if self.document_handler is None:
             raise ValueError(
