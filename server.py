@@ -150,16 +150,11 @@ class PipelineResponse(BaseModel):
 
 @app.get("/health", tags=["Utility"])
 async def health_check():
-    """Liveness probe — returns 200 OK when the server is running."""
     return {"status": "ok", "service": "AskTheSite API"}
 
 
 @app.post("/crawl", response_model=CrawlResponse, tags=["Pipeline"])
 async def crawl_endpoint(request: CrawlRequest):
-    """
-    Crawl *url* and save the extracted markdown to *output_folder*.
-    This is an async operation that runs the Crawl4AI crawler under the hood.
-    """
     try:
         logger.info(f"[/crawl] url={request.url}  folder={request.output_folder}")
         crawler = WebCrawler()
@@ -180,11 +175,6 @@ async def crawl_endpoint(request: CrawlRequest):
 
 @app.post("/ingest", response_model=IngestResponse, tags=["Pipeline"])
 def ingest_endpoint(request: IngestRequest):
-    """
-    Parse documents in *input_folder* and build (or refresh) the vector index.
-    A new RAGAgent is created (resetting any cached instance) so that fresh
-    documents are picked up on every call.
-    """
     global _agent
     try:
         logger.info(f"[/ingest] folder={request.input_folder}  ns={request.namespace}")
@@ -210,11 +200,6 @@ def ingest_endpoint(request: IngestRequest):
 
 @app.post("/query", response_model=QueryResponse, tags=["Pipeline"])
 def query_endpoint(request: QueryRequest):
-    """
-    Run a RAG query against the existing vector index and return a generated answer.
-    The agent is initialised lazily on the first call; subsequent calls reuse
-    the cached instance for speed.
-    """
     try:
         logger.info(f"[/query] prompt={request.prompt!r}")
         agent = get_agent(
@@ -235,18 +220,10 @@ def query_endpoint(request: QueryRequest):
 
 @app.post("/pipeline", response_model=PipelineResponse, tags=["Pipeline"])
 async def pipeline_endpoint(request: PipelineRequest):
-    """
-    Run the **full pipeline** end-to-end:
 
-    1. Crawl the target URL.
-    2. Ingest the crawled documents into the vector index.
-    3. Answer the provided query using RAG.
-    """
     global _agent
     try:
         logger.info(f"[/pipeline] url={request.url}  query={request.query!r}")
-
-        # Step 1 — Crawl
         crawler = WebCrawler()
         await crawler.get_page_data(
             url=str(request.url),
@@ -254,9 +231,7 @@ async def pipeline_endpoint(request: PipelineRequest):
             filename="extracted_data",
             append=False,
         )
-
-        # Step 2 — Ingest
-        _agent = None  # always rebuild so fresh docs are picked up
+        _agent = None
         agent = get_agent(
             namespace=request.namespace,
             input_folder=f"{request.output_folder}/",
@@ -267,10 +242,7 @@ async def pipeline_endpoint(request: PipelineRequest):
             llm_temperature=request.llm_temperature,
         )
         agent.create_index()
-
-        # Step 3 — Query
         answer = agent.run(request.query)
-
         return PipelineResponse(
             url=str(request.url),
             namespace=request.namespace,
