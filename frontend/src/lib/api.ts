@@ -14,8 +14,13 @@ import type {
   GraphResponse,
   HealthResponse,
   Job,
+  McpServer,
+  ModelsResponse,
   PageRecord,
-  ProviderInfo,
+  SearchHit,
+  Session,
+  SessionDetail,
+  ToolInfo,
   Workspace,
 } from "./types";
 
@@ -84,8 +89,91 @@ const json = (data: unknown): RequestInit => ({
 export const api = {
   health: () => request<HealthResponse>("/health"),
 
-  models: () =>
-    request<{ providers: ProviderInfo[]; default: string }>("/models"),
+  models: () => request<ModelsResponse>("/models"),
+
+  updateModel: (provider: string, model: string, patch: { enabled?: boolean; is_default?: boolean }) =>
+    request<ModelsResponse>(`/models/${provider}/${model}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
+
+  addModel: (provider: string, model_id: string, make_default = false) =>
+    request<ModelsResponse>("/models", json({ provider, model_id, make_default })),
+
+  resetModel: (provider: string, model: string) =>
+    request<ModelsResponse>(`/models/${provider}/${model}`, { method: "DELETE" }),
+
+  // ── sessions ─────────────────────────────────────────────────────────
+
+  listSessions: (workspaceId?: string) => {
+    const params = workspaceId ? `?workspace_id=${workspaceId}` : "";
+    return request<{ sessions: Session[] }>(`/sessions${params}`).then((r) => r.sessions);
+  },
+
+  createSession: (input: Partial<Omit<Session, "id" | "created_at" | "updated_at">>) =>
+    request<{ session: Session }>("/sessions", json(input)).then((r) => r.session),
+
+  getSession: (id: string) => request<SessionDetail>(`/sessions/${id}`),
+
+  updateSession: (id: string, patch: Partial<Session>) =>
+    request<{ session: Session }>(`/sessions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }).then((r) => r.session),
+
+  deleteSession: (id: string) =>
+    request<{ deleted: boolean }>(`/sessions/${id}`, { method: "DELETE" }),
+
+  cancelSession: (id: string) =>
+    request<{ cancelled: boolean }>(`/sessions/${id}/cancel`, { method: "POST" }),
+
+  forkSession: (id: string, turnId?: string) =>
+    request<{ session: Session }>(`/sessions/${id}/fork`, json({ turn_id: turnId ?? null })).then(
+      (r) => r.session,
+    ),
+
+  searchSessions: (q: string) =>
+    request<{ results: SearchHit[] }>(`/sessions/search?q=${encodeURIComponent(q)}`).then(
+      (r) => r.results,
+    ),
+
+  exportUrl: (id: string, format: "markdown" | "json") =>
+    `${API_BASE}/sessions/${id}/export?format=${format}`,
+
+  feedback: (messageId: string, value: -1 | 0 | 1) =>
+    request<{ feedback: number }>(`/messages/${messageId}/feedback`, json({ value })),
+
+  // ── tools & MCP ──────────────────────────────────────────────────────
+
+  tools: () => request<{ tools: ToolInfo[] }>("/tools").then((r) => r.tools),
+
+  setTool: (name: string, enabled: boolean) =>
+    request<{ tools: ToolInfo[] }>(`/tools/${name}`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }).then((r) => r.tools),
+
+  mcpServers: () => request<{ servers: McpServer[] }>("/mcp/servers").then((r) => r.servers),
+
+  addMcpServer: (input: Partial<McpServer>) =>
+    request<{ servers: McpServer[] }>("/mcp/servers", json(input)).then((r) => r.servers),
+
+  updateMcpServer: (id: string, patch: Partial<McpServer>) =>
+    request<{ servers: McpServer[] }>(`/mcp/servers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }).then((r) => r.servers),
+
+  deleteMcpServer: (id: string) =>
+    request<{ servers: McpServer[] }>(`/mcp/servers/${id}`, { method: "DELETE" }).then(
+      (r) => r.servers,
+    ),
+
+  testMcpServer: (id: string) =>
+    request<{ ok: boolean; tools: { name: string; description: string }[] }>(
+      `/mcp/servers/${id}/test`,
+      { method: "POST" },
+    ),
 
   listWorkspaces: () =>
     request<{ workspaces: Workspace[] }>("/workspaces").then((r) => r.workspaces),

@@ -133,14 +133,169 @@ export interface GraphResponse {
   edges: { source: string; target: string }[];
 }
 
+export interface ModelSpec {
+  provider: string;
+  id: string;
+  key: string;
+  label: string;
+  context_window: number;
+  supports_tools: boolean;
+  supports_thinking: boolean;
+  supports_vision: boolean;
+  description: string;
+  enabled: boolean;
+  is_default: boolean;
+  custom: boolean;
+}
+
 export interface ProviderInfo {
   provider: string;
   label: string;
   available: boolean;
   reason: string | null;
+  /** Enabled model ids only. */
   models: string[];
-  default_model: string;
+  specs: ModelSpec[];
+  default_model: string | null;
   requires_key: boolean;
+}
+
+export interface ModelsResponse {
+  providers: ProviderInfo[];
+  default: string;
+  default_model: string | null;
+}
+
+// ── sessions ─────────────────────────────────────────────────────────────
+
+export type Mode = "rag" | "agent";
+
+export interface ThinkingSetting {
+  enabled: boolean;
+  effort?: "low" | "medium" | "high" | null;
+}
+
+export interface Usage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+}
+
+export interface Session {
+  id: string;
+  title: string;
+  workspace_ids: string[];
+  provider: string | null;
+  model: string | null;
+  mode: Mode;
+  engine: Engine;
+  top_k: number;
+  thinking: ThinkingSetting | null;
+  system_prompt: string | null;
+  pinned: boolean;
+  usage: Usage | null;
+  created_at: string;
+  updated_at: string;
+  running?: boolean;
+}
+
+export interface SourceCitation extends Citation {
+  workspace_id?: string;
+  workspace_name?: string;
+}
+
+export interface Grounding {
+  score: number | null;
+  label: "grounded" | "partly grounded" | "ungrounded" | "n/a";
+  sentences: number;
+  supported: number;
+  uncited: string[];
+  invalid_markers: number[];
+  unused_sources: number[];
+}
+
+export interface TraceEntry {
+  step?: number;
+  kind: "model" | "tool" | "retrieve" | "cancelled";
+  name?: string;
+  elapsed_ms?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  tool_calls?: number;
+  is_error?: boolean;
+  hits?: number;
+  engine?: string;
+  stop_reason?: string;
+}
+
+export interface ToolStep {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  result?: string | null;
+  preview?: string;
+  is_error: boolean;
+  elapsed_ms: number | null;
+  done?: boolean;
+}
+
+export interface StoredAnswer {
+  id: string;
+  content: string;
+  thinking: string | null;
+  citations: SourceCitation[] | null;
+  grounding: Grounding | null;
+  followups: string[] | null;
+  trace: TraceEntry[] | null;
+  usage: Usage | null;
+  provider: string | null;
+  model: string | null;
+  elapsed_ms: number | null;
+  feedback: -1 | 0 | 1;
+}
+
+export interface Turn {
+  turn_id: string;
+  user: { id: string; content: string; created_at: string } | null;
+  steps: ToolStep[];
+  answer: StoredAnswer | null;
+}
+
+export interface SessionDetail {
+  session: Session;
+  turns: Turn[];
+}
+
+export interface SearchHit {
+  message_id: string;
+  session_id: string;
+  title: string;
+  role: string;
+  created_at: string;
+  snippet: string;
+}
+
+export interface ToolInfo {
+  name: string;
+  description: string;
+  source: string;
+  risk: "read" | "network" | "write" | "external";
+  enabled: boolean;
+  enabled_by_default: boolean;
+  input_schema: Record<string, unknown>;
+}
+
+export interface McpServer {
+  id: string;
+  name: string;
+  transport: "stdio" | "http";
+  command: string | null;
+  args: string[];
+  env: Record<string, string>;
+  url: string | null;
+  headers: Record<string, string>;
+  enabled: boolean;
+  status: { connected: boolean; error: string | null; tools: string[] };
 }
 
 export interface HealthResponse {
@@ -149,6 +304,7 @@ export interface HealthResponse {
   version: string;
   workspaces: number;
   llm_ready: boolean;
+  mcp_connected?: number;
 }
 
 export interface PageRecord {
