@@ -108,12 +108,21 @@ class Settings(BaseSettings):
     # ── Observability / misc ──────────────────────────────────────────────
     phoenix_api_key: Optional[str] = Field(None, validation_alias="PHOENIX_API_KEY")
     log_level: str = Field("INFO", validation_alias="LOG_LEVEL")
+    # When set, every API call (except /health and the docs) needs
+    # "Authorization: Bearer <token>". Leave unset for local use.
+    api_token: Optional[str] = Field(None, validation_alias="API_TOKEN")
+    # Host headers the /mcp endpoint accepts (DNS-rebinding protection).
+    # Defaults to localhost on any port; add your domain when serving MCP
+    # behind a proxy, e.g. "askthesite.example.com,localhost:*".
+    mcp_allowed_hosts: Annotated[List[str], NoDecode] = Field(
+        default_factory=list, validation_alias="MCP_ALLOWED_HOSTS"
+    )
     cors_origins: Annotated[List[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
         validation_alias="CORS_ORIGINS",
     )
 
-    @field_validator("cors_origins", "openai_compatible_models", mode="before")
+    @field_validator("cors_origins", "openai_compatible_models", "mcp_allowed_hosts", mode="before")
     @classmethod
     def _split_origins(cls, v):
         """Accept a comma-separated string as well as a real list."""

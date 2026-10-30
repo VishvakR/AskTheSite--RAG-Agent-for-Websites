@@ -523,6 +523,12 @@ class Catalog:
             )
         return current
 
+    def delete_model_setting(self, provider: str, model_id: str) -> bool:
+        cur = self._exec(
+            "DELETE FROM model_settings WHERE provider = ? AND model_id = ?", (provider, model_id)
+        )
+        return cur.rowcount > 0
+
     # ── MCP servers ───────────────────────────────────────────────────────
 
     def _row_to_mcp(self, row: sqlite3.Row) -> MCPServerConfig:
