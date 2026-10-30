@@ -197,8 +197,12 @@ def test_grounding_flags_uncited_claims_and_bad_markers():
     assert report["unused_sources"] == []
 
 
-def test_grounding_ignores_disclaimers_and_headings():
-    report = assess("# Answer\n\nThe sources do not mention pricing at all.", [{"marker": 1}])
+def test_grounding_ignores_disclaimers_headings_and_lead_ins():
+    report = assess(
+        "# Answer\n\nThe sources do not mention pricing at all.\n\n"
+        "A minimal crawl looks like this:\n\n```py\nx = 1\n```",
+        [{"marker": 1}],
+    )
     assert report["score"] is None and report["label"] == "n/a"
 
 

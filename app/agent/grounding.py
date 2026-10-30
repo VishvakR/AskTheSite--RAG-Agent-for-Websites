@@ -11,8 +11,9 @@ each substantive sentence for a valid ``[n]`` marker and reports:
 
 A sentence also counts as supported when the *next* sentence in the same
 paragraph carries the citation, since people (and models) often cite once at
-the end of a two-sentence point. Headings, code, very short fragments and
-"the sources don't say" disclaimers are not claims and are skipped.
+the end of a two-sentence point. Headings, code, very short fragments,
+lead-ins ending in a colon and "the sources don't say" disclaimers are not
+claims and are skipped.
 """
 
 from __future__ import annotations
@@ -67,7 +68,8 @@ def assess(answer: str, citations: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
             for m in marks[i]:
                 (used if m in known else invalid).add(m)
             plain = _MARKER.sub("", sentence)
-            if len(plain.split()) < MIN_WORDS or _DISCLAIMER.search(plain):
+            # "Run this:" introduces code or a list; it isn't a claim itself.
+            if len(plain.split()) < MIN_WORDS or plain.rstrip().endswith(":") or _DISCLAIMER.search(plain):
                 continue
             total += 1
             here = marks[i] & known
