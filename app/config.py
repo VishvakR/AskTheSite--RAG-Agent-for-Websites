@@ -91,6 +91,16 @@ class Settings(BaseSettings):
     crawl_concurrency: int = Field(8, ge=1, validation_alias="CRAWL_CONCURRENCY")
     max_concurrent_jobs: int = Field(2, ge=1, validation_alias="MAX_CONCURRENT_JOBS")
 
+    # ── Agent harness ─────────────────────────────────────────────────────
+    agent_max_steps: int = Field(8, ge=1, le=50, validation_alias="AGENT_MAX_STEPS")
+    tool_timeout_s: float = Field(60.0, gt=0, validation_alias="TOOL_TIMEOUT_S")
+    # Longest tool output handed back to the model, in characters.
+    tool_result_max_chars: int = Field(8000, ge=500, validation_alias="TOOL_RESULT_MAX_CHARS")
+    # Suggest follow-up questions after each answer (one extra short call).
+    agent_followups: bool = Field(True, validation_alias="AGENT_FOLLOWUPS")
+    # Lets the agent crawl a live URL that is not in any workspace.
+    agent_allow_fetch: bool = Field(False, validation_alias="AGENT_ALLOW_FETCH")
+
     # ── Chunking ──────────────────────────────────────────────────────────
     chunk_size: int = Field(1000, ge=100, validation_alias="CHUNK_SIZE")
     chunk_overlap: int = Field(200, ge=0, validation_alias="CHUNK_OVERLAP")
