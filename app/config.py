@@ -8,10 +8,10 @@ is read once, validated, and exposed through the cached :func:`get_settings`.
 
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -64,6 +64,26 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = Field(None, validation_alias="ANTHROPIC_API_KEY")
     openai_api_key: Optional[str] = Field(None, validation_alias="OPENAI_API_KEY")
 
+    # Any server speaking the OpenAI Chat Completions protocol (LM Studio,
+    # vLLM, OpenRouter, Groq, …). Models are listed from the server unless
+    # pinned here.
+    openai_compatible_base_url: Optional[str] = Field(
+        None, validation_alias="OPENAI_COMPATIBLE_BASE_URL"
+    )
+    openai_compatible_api_key: Optional[str] = Field(
+        None, validation_alias="OPENAI_COMPATIBLE_API_KEY"
+    )
+    openai_compatible_models: Annotated[List[str], NoDecode] = Field(
+        default_factory=list, validation_alias="OPENAI_COMPATIBLE_MODELS"
+    )
+
+    llm_max_tokens: int = Field(16000, ge=256, validation_alias="LLM_MAX_TOKENS")
+    # Ask models for visible reasoning when they support it.
+    llm_thinking: bool = Field(True, validation_alias="LLM_THINKING")
+    llm_effort: Optional[str] = Field(None, validation_alias="LLM_EFFORT")
+    # Let Anthropic retry a declined request on a substitute model server-side.
+    anthropic_fallbacks: bool = Field(True, validation_alias="ANTHROPIC_FALLBACKS")
+
     # ── Crawling ──────────────────────────────────────────────────────────
     crawl_headless: bool = Field(True, validation_alias="CRAWL_HEADLESS")
     crawl_max_pages: int = Field(100, ge=1, validation_alias="CRAWL_MAX_PAGES")
@@ -78,12 +98,12 @@ class Settings(BaseSettings):
     # ── Observability / misc ──────────────────────────────────────────────
     phoenix_api_key: Optional[str] = Field(None, validation_alias="PHOENIX_API_KEY")
     log_level: str = Field("INFO", validation_alias="LOG_LEVEL")
-    cors_origins: List[str] = Field(
+    cors_origins: Annotated[List[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
         validation_alias="CORS_ORIGINS",
     )
 
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins", "openai_compatible_models", mode="before")
     @classmethod
     def _split_origins(cls, v):
         """Accept a comma-separated string as well as a real list."""
