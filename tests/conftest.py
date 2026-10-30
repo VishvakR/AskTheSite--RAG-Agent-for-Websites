@@ -58,6 +58,37 @@ class FakeLLM:
         for piece in ["Install ", "it ", "with ", "pip ", "[1]."]:
             yield piece
 
+    @classmethod
+    def spec_for(cls, model_id: str, settings=None):
+        from app.llm.registry import ModelSpec
+
+        return ModelSpec(
+            "fake", model_id, context_window=100_000,
+            supports_tools=True, supports_thinking=True,
+        )
+
+    def chat(self, messages, tools=None, thinking=None):
+        """
+        Agent-style when tools are offered: think, call ``search_site`` with
+        the question, then answer citing [1] once the result is back.
+        """
+        from app.llm.main import chat_via_prompt
+        from app.llm.types import ChatMessage, Stop, ThinkingDelta, ToolCall, ToolCallEvent, Usage
+
+        last_user = max(i for i, m in enumerate(messages) if m.role == "user")
+        searched = any(m.role == "tool" for m in messages[last_user:])
+        if tools and not searched:
+            call = ToolCall("call_1", "search_site", {"query": messages[last_user].content})
+            yield ThinkingDelta("I should search the site first.")
+            yield ToolCallEvent(call)
+            yield Usage(12, 4)
+            yield Stop("tool_use", ChatMessage(
+                role="assistant", thinking="I should search the site first.", tool_calls=[call],
+            ))
+            return
+        yield Usage(20, 6)
+        yield from chat_via_prompt(self, messages)
+
     def describe(self) -> dict:
         return {"provider": self.provider, "model": self.model_name}
 

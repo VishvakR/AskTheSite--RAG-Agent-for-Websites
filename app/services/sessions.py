@@ -121,7 +121,19 @@ def title_from(prompt: str) -> str:
 # ── message conversion ───────────────────────────────────────────────────
 
 
+#: ``raw_provider`` marking a user message whose ``raw`` holds the full
+#: prompt the model saw (sources + question) while ``content`` keeps just the
+#: question for display. Replay sends ``raw`` so history is exact.
+AUGMENTED = "augmented"
+
+#: ``name`` on a user message the harness injected (e.g. the step-limit
+#: notice). Replayed to the model, never shown as the user's question.
+HARNESS_NOTE = "harness"
+
+
 def to_chat(record: MessageRecord) -> ChatMessage:
+    if record.role == "user" and record.raw_provider == AUGMENTED and record.raw:
+        return ChatMessage.user(str(record.raw))
     return ChatMessage(
         role=record.role,  # type: ignore[arg-type]
         content=record.content or "",
@@ -263,7 +275,8 @@ def turns(session_id: str) -> List[Dict[str, Any]]:
             out.append(turn)
 
         if r.role == "user":
-            turn["user"] = {"id": r.id, "content": r.content, "created_at": r.created_at}
+            if r.name != HARNESS_NOTE and turn["user"] is None:
+                turn["user"] = {"id": r.id, "content": r.content, "created_at": r.created_at}
         elif r.role == "assistant":
             if r.thinking:
                 turn["_thinking"].append(r.thinking)
@@ -308,7 +321,12 @@ def truncate_at_turn(session_id: str, turn_id: str) -> str:
     if first is None:
         raise ValueError(f"No turn {turn_id!r} in session {session_id!r}")
     question = next(
-        (r.content for r in records if r.turn_id == turn_id and r.role == "user"), ""
+        (
+            r.content
+            for r in records
+            if r.turn_id == turn_id and r.role == "user" and r.name != HARNESS_NOTE
+        ),
+        "",
     )
     get_catalog().delete_messages_from(session_id, first.seq)
     session = require(session_id)
