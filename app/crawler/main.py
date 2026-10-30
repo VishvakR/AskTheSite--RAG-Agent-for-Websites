@@ -3,7 +3,8 @@ import os
 import json
 import hashlib
 from collections import deque
-from typing import List, Set
+from pathlib import Path
+from typing import Callable, List, Optional, Set
 import logging
 
 from crawl4ai import (
@@ -11,8 +12,9 @@ from crawl4ai import (
 )
 
 from app.crawler.config import CrawlConfig
+from app.crawler.pages import PageRecord, WorkspaceStore
 from app.crawler.sitemeta import SitemapCrawler, RobotsHandler
-from app.crawler import URLConfig
+from app.crawler.url_utils import URLConfig
 
 logger = logging.getLogger(__name__)
 
@@ -180,152 +182,216 @@ class WebCrawler:
         return site_urls
     
 
-    async def crawl_parallel(
+    @staticmethod
+    def _page_title(result) -> str:
+        """Best-effort page title from the crawl result's metadata."""
+        meta = getattr(result, "metadata", None) or {}
+        title = meta.get("title") if isinstance(meta, dict) else None
+        return (title or "").strip()
+
+    def _internal_links(self, result, origin: str) -> List[str]:
+        """Normalised same-origin outlinks, used to build the knowledge graph."""
+        links = []
+        seen = set()
+        for link in (result.links or {}).get("internal", []) or []:
+            href = link.get("href") if isinstance(link, dict) else None
+            if not href:
+                continue
+            normalized = self.url_config.normalize_url(href)
+            if not self.url_config.is_valid_url(normalized):
+                continue
+            if self.url_config.extract_domain(normalized) != origin:
+                continue
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            links.append(normalized)
+        return links
+
+    async def crawl_to_workspace(
         self,
         urls: List[str],
-        folder: str = None,
-        filename: str = None,
-        append: bool = False,
-    ):
-        """Efficient parallel crawl using Crawl4AI arun_many."""
+        workspace_dir,
+        seed_url: str,
+        mode: str = "page",
+        depths: Optional[dict] = None,
+        on_progress: Optional[Callable[[int, int, str], None]] = None,
+    ) -> List[PageRecord]:
+        """
+        Crawl *urls* and write one markdown file per page, with front-matter.
 
-        if folder:
-            os.makedirs(folder, exist_ok=True)
+        The previous implementation passed a single ``filename`` for the whole
+        batch and opened it in ``"w"`` mode, so a multi-page crawl overwrote
+        itself and kept only the last page. Every page now gets its own file
+        keyed by a hash of its URL, and the returned records make failures
+        visible instead of silently reporting success.
+        """
+        store = WorkspaceStore(Path(workspace_dir))
+        store.ensure()
+        depths = depths or {}
 
-        # Normalize URLs first
-        normalized_urls = [
-            self.url_config.normalize_url(u) for u in urls
-        ]
+        normalized = []
+        seen = set()
+        for u in urls:
+            n = self.url_config.normalize_url(u)
+            if n not in seen:
+                seen.add(n)
+                normalized.append(n)
 
-        # Filter robots BEFORE sending to arun_many
-        allowed_urls = []
-        for url in normalized_urls:
+        allowed = []
+        for url in normalized:
             self.robots_handler.load(url)
             if self.robots_handler.is_allowed(url):
-                allowed_urls.append(url)
+                allowed.append(url)
             else:
-                logger.warning(f"Blocked by robots.txt: {url}")
+                logger.warning("Blocked by robots.txt: %s", url)
 
-        if not allowed_urls:
+        if not allowed:
             logger.warning("No URLs allowed after robots filtering.")
-            return
+            store.write_manifest(seed_url, [], mode=mode)
+            return []
 
-        async with AsyncWebCrawler(
-            config=self.crawl_config.browser_config
-        ) as crawler:
+        origin = self.url_config.extract_domain(seed_url)
+        records: List[PageRecord] = []
+        total = len(allowed)
+        done = 0
 
-            logger.info(
-                f"Starting parallel crawl of {len(allowed_urls)} URLs"
-            )
+        if on_progress:
+            on_progress(0, total, f"Crawling {total} page(s)")
 
+        async with AsyncWebCrawler(config=self.crawl_config.browser_config) as crawler:
+            logger.info("Starting parallel crawl of %d URLs", total)
             results = await crawler.arun_many(
-                urls=allowed_urls,
+                urls=allowed,
                 config=self.crawl_config.crawl_config,
             )
 
             for result in results:
-
+                url = getattr(result, "url", "") or ""
+                done += 1
                 try:
-                    url = result.url
-
                     if not result.success:
-                        logger.error(
-                            f"Failed to crawl {url}: {result.error}"
-                        )
-                        continue
-
-                    logger.info(f"Successfully crawled: {url}")
-
-                    # Determine filename
-                    if append:
-                        if not filename:
-                            raise ValueError(
-                                "Filename required when append=True"
+                        logger.error("Failed to crawl %s: %s", url, result.error_message)
+                        records.append(
+                            PageRecord(
+                                url=url,
+                                depth=depths.get(url, 0),
+                                error=str(result.error_message or "crawl failed"),
                             )
-                        file_name = filename
-                    else:
-                        file_name = (
-                            hashlib.sha256(url.encode()).hexdigest()[:8]
-                            if not filename
-                            else filename
                         )
-
-                    if folder:
-                        file_name = os.path.join(folder, file_name)
-
-                    file_path = f"{file_name}.md"
-
-                    content = result.markdown
-
-                    if not content:
-                        logger.warning(f"No content extracted from {url}")
                         continue
 
-                    with open(
-                        file_path,
-                        "a" if append else "w",
-                        encoding="utf-8",
-                    ) as f:
-                        f.write(self.crawl_config.filter_text(content))
+                    markdown = str(result.markdown or "")
+                    markdown = self.crawl_config.filter_text(markdown)
+                    if not markdown.strip():
+                        logger.warning("No content extracted from %s", url)
+                        records.append(
+                            PageRecord(
+                                url=url,
+                                depth=depths.get(url, 0),
+                                error="no content extracted",
+                            )
+                        )
+                        continue
 
-                except Exception:
-                    logger.exception("Error processing crawl result")
+                    record = PageRecord(
+                        url=url,
+                        title=self._page_title(result),
+                        depth=depths.get(url, 0),
+                        outlinks=self._internal_links(result, origin),
+                    )
+                    store.write_page(record, markdown)
+                    records.append(record)
+                    logger.info("Crawled %s (%d chars)", url, record.char_count)
 
-        logger.info("Parallel crawl completed.")
+                except Exception as exc:
+                    logger.exception("Error processing crawl result for %s", url)
+                    records.append(
+                        PageRecord(url=url, depth=depths.get(url, 0), error=str(exc))
+                    )
+                finally:
+                    if on_progress:
+                        on_progress(done, total, f"Crawled {done}/{total}")
 
+        store.write_manifest(seed_url, records, mode=mode)
+        ok = sum(1 for r in records if r.ok)
+        logger.info("Crawl complete: %d/%d pages succeeded", ok, total)
+        return records
 
-    async def get_data(
+    async def discover_urls(
         self,
         url: str,
-        folder: str = None,
-        filename: str = None,
-        append: bool = False,
-    ):
-        """
-        Crawl entire website:
-        - Try sitemap first
-        - Fallback to BFS crawl
-        - Then crawl pages in parallel
-        """
+        max_pages: int = 100,
+        max_depth: int = 3,
+        on_progress: Optional[Callable[[int, int, str], None]] = None,
+    ) -> List[str]:
+        """Sitemap first, BFS fallback. Returns at most *max_pages* URLs."""
+        if on_progress:
+            on_progress(0, 0, "Checking sitemap")
 
-        # Step 1: Try sitemap
-        logger.info(f"Checking sitemap for {url}")
+        urls = []
+        try:
+            urls = list(self.sitemap_crawler.crawl_sitemap(url) or [])
+        except Exception:
+            logger.exception("Sitemap lookup failed for %s", url)
 
-        all_urls = self.sitemap_crawler.crawl_sitemap(url)
-
-        # Step 2: If no sitemap → BFS crawl
-        if not all_urls:
+        if urls:
+            logger.info("Sitemap yielded %d URLs", len(urls))
+        else:
             logger.info("No sitemap found. Falling back to BFS crawl.")
-            all_urls = await self.get_website_urls(url)
+            if on_progress:
+                on_progress(0, 0, "No sitemap - discovering links")
+            urls = list(
+                await self.get_website_urls(
+                    url, max_depth=max_depth, max_urls=max_pages
+                )
+            )
 
-        if not all_urls:
-            logger.warning("No URLs discovered.")
-            return
+        seed = self.url_config.normalize_url(url)
+        normalized = [seed]
+        seen = {seed}
+        for u in urls:
+            n = self.url_config.normalize_url(u)
+            if n not in seen:
+                seen.add(n)
+                normalized.append(n)
 
-        logger.info(f"Discovered {len(all_urls)} URLs. Starting parallel crawl.")
+        return normalized[:max_pages]
 
-        # Step 3: Crawl discovered URLs
-        await self.crawl_parallel(
-            urls=list(all_urls),
-            folder=folder,
-            filename=filename,
-            append=append,
+    async def crawl_site(
+        self,
+        url: str,
+        workspace_dir,
+        max_pages: int = 100,
+        max_depth: int = 3,
+        on_progress: Optional[Callable[[int, int, str], None]] = None,
+    ) -> List[PageRecord]:
+        """Discover a whole site (sitemap, else BFS) and crawl every page."""
+        urls = await self.discover_urls(
+            url, max_pages=max_pages, max_depth=max_depth, on_progress=on_progress
+        )
+        if not urls:
+            logger.warning("No URLs discovered for %s", url)
+            return []
+        return await self.crawl_to_workspace(
+            urls=urls,
+            workspace_dir=workspace_dir,
+            seed_url=url,
+            mode="site",
+            on_progress=on_progress,
         )
 
-    async def get_page_data(
+    async def crawl_page(
         self,
         url: str,
-        folder: str = None,
-        filename: str = None,
-        append: bool = False,
-    ):
-        """
-        Crawl a single page and save its content.
-        """
-
-        await self.crawl_parallel(
+        workspace_dir,
+        on_progress: Optional[Callable[[int, int, str], None]] = None,
+    ) -> List[PageRecord]:
+        """Crawl exactly one page into a workspace."""
+        return await self.crawl_to_workspace(
             urls=[url],
-            folder=folder,
-            filename=filename,
-            append=append,
+            workspace_dir=workspace_dir,
+            seed_url=url,
+            mode="page",
+            on_progress=on_progress,
         )
