@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from .main import LanguageModel
 from .registry import ModelSpec, fallback_spec
@@ -62,6 +62,38 @@ class LLMManager:
             return fallback_spec(provider, model)
 
     @staticmethod
+    def _user_settings() -> Dict[Tuple[str, str], Any]:
+        try:
+            from app.catalog import get_catalog
+
+            return {(m.provider, m.model_id): m for m in get_catalog().list_model_settings()}
+        except Exception:
+            logger.debug("Model settings unavailable", exc_info=True)
+            return {}
+
+    @staticmethod
+    def default_selection() -> Tuple[str, Optional[str]]:
+        """
+        The model new sessions start on: whatever the user starred in the
+        model settings, else ``LLM_PROVIDER`` / ``LLM_MODEL`` from the env.
+        """
+        from app.config import get_settings
+
+        for setting in LLMManager._user_settings().values():
+            if setting.is_default and setting.provider in LanguageModelFactory._registry:
+                return setting.provider, setting.model_id
+        settings = get_settings()
+        provider = settings.llm_provider
+        cls = LanguageModelFactory._registry.get(provider)
+        model: Optional[str] = settings.llm_model if provider == "opensource" else None
+        if model is None and cls is not None and hasattr(cls, "default_model"):
+            try:
+                model = cls.default_model(settings) or None
+            except Exception:
+                model = None
+        return provider, model
+
+    @staticmethod
     def availability() -> List[Dict[str, Any]]:
         """
         Report which providers are usable right now, and what they offer.
@@ -75,6 +107,8 @@ class LLMManager:
         from app.config import get_settings
 
         settings = get_settings()
+        user = LLMManager._user_settings()
+        default_provider, default_model = LLMManager.default_selection()
         out: List[Dict[str, Any]] = []
 
         for name in LanguageModelFactory.registered():
@@ -101,13 +135,28 @@ class LLMManager:
                 specs = [fallback_spec(name, cls.model_name)]
             default = default or (specs[0].id if specs else None)
 
+            # Models the user added by hand appear alongside the listed ones.
+            listed = {s.id for s in specs}
+            for (provider, model_id) in user:
+                if provider == name and model_id not in listed:
+                    specs.append(LLMManager.spec(name, model_id))
+
+            spec_rows = []
+            for spec in specs:
+                row = spec.to_dict()
+                setting = user.get((name, spec.id))
+                row["enabled"] = setting.enabled if setting else True
+                row["is_default"] = name == default_provider and spec.id == default_model
+                row["custom"] = spec.id not in listed
+                spec_rows.append(row)
+
             out.append({
                 "provider": name,
                 "label": getattr(cls, "label", "") or name,
                 "available": available,
                 "reason": None if available else (reason or "Unavailable"),
-                "models": [s.id for s in specs],
-                "specs": [s.to_dict() for s in specs],
+                "models": [r["id"] for r in spec_rows if r["enabled"]],
+                "specs": spec_rows,
                 "default_model": default,
                 "requires_key": bool(getattr(cls, "requires_key", False)),
             })
