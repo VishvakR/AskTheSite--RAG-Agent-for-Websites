@@ -5,6 +5,7 @@ AskTheSite CLI.
     uv run main.py ask <workspace-id> "How does crawl4ai extract markdown?"
     uv run main.py compare <workspace-id> "chunking strategy"
     uv run main.py list
+    uv run main.py mcp          # serve the indexed sites to MCP clients over stdio
 """
 
 from __future__ import annotations
@@ -105,6 +106,14 @@ def cmd_delete(args) -> int:
     return 0
 
 
+def cmd_mcp(args) -> int:
+    from app.mcp.server import get_server
+
+    # stdout carries the MCP protocol; logging already goes to stderr.
+    get_server().run("stdio")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="askthesite", description=__doc__)
     sub = p.add_subparsers(dest="command", required=True)
@@ -136,6 +145,9 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("delete", help="Delete a workspace")
     d.add_argument("workspace_id")
     d.set_defaults(func=cmd_delete, is_async=False)
+
+    s = sub.add_parser("mcp", help="Serve indexed sites to MCP clients over stdio")
+    s.set_defaults(func=cmd_mcp, is_async=False)
 
     return p
 
