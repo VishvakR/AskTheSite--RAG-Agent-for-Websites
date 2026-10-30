@@ -1,4 +1,11 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 
 export function cn(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -8,7 +15,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-brand text-white hover:bg-brand-hover disabled:hover:bg-brand shadow-sm",
+    "bg-brand text-white dark:text-canvas hover:bg-brand-hover disabled:hover:bg-brand",
   secondary:
     "border border-line bg-surface text-body hover:bg-canvas hover:text-ink",
   ghost: "text-muted hover:bg-canvas hover:text-ink",
@@ -33,7 +40,7 @@ export function Button({
       {...rest}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
+        "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium",
         "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring",
         "disabled:cursor-not-allowed disabled:opacity-55",
         VARIANTS[variant],
@@ -180,3 +187,144 @@ export const STATUS_TONE: Record<string, Tone> = {
   failed: "bad",
   cancelled: "warn",
 };
+
+/** Square, label-less button for toolbars; always pass an aria-label. */
+export function IconButton({
+  className,
+  active,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
+  return (
+    <button
+      {...rest}
+      className={cn(
+        "grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition-colors",
+        "hover:bg-canvas hover:text-ink disabled:opacity-40",
+        active && "bg-canvas text-ink",
+        className,
+      )}
+    />
+  );
+}
+
+export function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="rounded border border-line bg-surface px-1.5 py-px font-sans text-[11px] text-muted">
+      {children}
+    </kbd>
+  );
+}
+
+export function Switch({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40",
+        checked ? "bg-brand" : "bg-line-strong",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+          checked && "translate-x-4",
+        )}
+      />
+    </button>
+  );
+}
+
+/**
+ * Click-to-open floating panel anchored to its trigger. Closes on outside
+ * click and Escape; the trigger keeps focus semantics via aria-expanded.
+ */
+export function Popover({
+  trigger,
+  children,
+  align = "start",
+  side = "bottom",
+  className,
+  open: controlled,
+  onOpenChange,
+}: {
+  trigger: (props: { open: boolean; toggle: () => void }) => ReactNode;
+  children: ReactNode | ((close: () => void) => ReactNode);
+  align?: "start" | "end";
+  side?: "top" | "bottom";
+  className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [inner, setInner] = useState(false);
+  const open = controlled ?? inner;
+  const setOpen = (value: boolean) => {
+    setInner(value);
+    onOpenChange?.(value);
+  };
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  });
+
+  const close = () => setOpen(false);
+  return (
+    <div ref={ref} className="relative">
+      {trigger({ open, toggle: () => setOpen(!open) })}
+      {open && (
+        <div
+          className={cn(
+            "absolute z-40 min-w-56 rounded-xl border border-line bg-raised p-1.5 shadow-[0_12px_32px_-12px_rgb(15_20_30/0.28)]",
+            side === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5",
+            align === "start" ? "left-0" : "right-0",
+            className,
+          )}
+        >
+          {typeof children === "function" ? children(close) : children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function MenuItem({
+  className,
+  danger,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { danger?: boolean }) {
+  return (
+    <button
+      {...rest}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors",
+        danger ? "text-bad hover:bg-bad-soft" : "text-body hover:bg-canvas hover:text-ink",
+        "disabled:opacity-40",
+        className,
+      )}
+    />
+  );
+}
