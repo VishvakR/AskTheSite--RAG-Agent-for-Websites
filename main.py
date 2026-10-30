@@ -6,6 +6,7 @@ AskTheSite CLI.
     uv run main.py compare <workspace-id> "chunking strategy"
     uv run main.py list
     uv run main.py mcp          # serve the indexed sites to MCP clients over stdio
+    uv run main.py tui          # full-screen terminal chat
 """
 
 from __future__ import annotations
@@ -106,6 +107,16 @@ def cmd_delete(args) -> int:
     return 0
 
 
+def cmd_tui(args) -> int:
+    from app.tui.app import run
+
+    # Logging to the terminal would draw over the UI.
+    logging.getLogger().handlers.clear()
+    logging.basicConfig(filename=args.log, level=logging.INFO)
+    run()
+    return 0
+
+
 def cmd_mcp(args) -> int:
     from app.mcp.server import get_server
 
@@ -145,6 +156,10 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("delete", help="Delete a workspace")
     d.add_argument("workspace_id")
     d.set_defaults(func=cmd_delete, is_async=False)
+
+    t = sub.add_parser("tui", help="Full-screen terminal chat")
+    t.add_argument("--log", default="askthesite-tui.log", help="Where to write logs")
+    t.set_defaults(func=cmd_tui, is_async=False)
 
     s = sub.add_parser("mcp", help="Serve indexed sites to MCP clients over stdio")
     s.set_defaults(func=cmd_mcp, is_async=False)

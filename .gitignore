@@ -18,3 +18,5 @@ experiments/
 .pytest_cache/
 frontend/dist/
 frontend/node_modules/
+askthesite-tui.log
+/exports/

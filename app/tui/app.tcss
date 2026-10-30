@@ -1,0 +1,203 @@
+/* AskTheSite terminal UI. Quiet chrome, the conversation gets the space. */
+
+Screen {
+    background: $background;
+}
+
+#sidebar {
+    width: 30;
+    border-right: tall $panel;
+    padding: 0 1;
+}
+
+#brand {
+    text-style: bold;
+    color: $accent;
+    padding: 1 0;
+}
+
+.section {
+    color: $text-muted;
+    text-style: bold;
+    margin-top: 1;
+}
+
+#sidebar OptionList, #inspector OptionList {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+#sites {
+    height: auto;
+    max-height: 12;
+}
+
+#chats {
+    height: 1fr;
+}
+
+#main {
+    width: 1fr;
+    padding: 0 2;
+}
+
+#title {
+    text-style: bold;
+    padding: 1 0 0 0;
+    width: 1fr;
+}
+
+#chat {
+    height: 1fr;
+    padding: 1 0;
+}
+
+#prompt {
+    margin: 0;
+    border: tall $panel;
+}
+
+#prompt:focus {
+    border: tall $accent;
+}
+
+#status {
+    color: $text-muted;
+    height: 1;
+    padding: 0 1;
+}
+
+#inspector {
+    width: 38;
+    border-left: tall $panel;
+    padding: 0 1;
+}
+
+#sources {
+    height: auto;
+    max-height: 50%;
+}
+
+#source-detail {
+    margin-top: 1;
+    color: $text;
+}
+
+.welcome {
+    color: $text-muted;
+    padding: 2 4;
+}
+
+.turn {
+    height: auto;
+    margin-bottom: 2;
+}
+
+.user {
+    background: $panel;
+    padding: 0 1;
+    margin-bottom: 1;
+    text-style: bold;
+}
+
+.step {
+    height: auto;
+}
+
+.step-text {
+    margin: 0;
+    padding: 0;
+}
+
+.narration {
+    color: $text-muted;
+    text-style: italic;
+}
+
+.thinking {
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+
+.thinking CollapsibleTitle {
+    color: $text-muted;
+    padding: 0;
+}
+
+.thinking-text {
+    color: $text-muted;
+    padding: 0 0 0 2;
+}
+
+.tool-call {
+    padding: 0 0 0 2;
+    color: $text;
+}
+
+.notices {
+    height: auto;
+}
+
+.notice {
+    color: $warning;
+}
+
+.error {
+    color: $error;
+}
+
+.meta {
+    color: $text-muted;
+    height: auto;
+}
+
+.followups {
+    height: auto;
+    margin-top: 1;
+}
+
+.followup {
+    margin-right: 1;
+}
+
+/* dialogs */
+
+ModalScreen {
+    align: center middle;
+    background: $background 60%;
+}
+
+.dialog {
+    width: 76;
+    height: auto;
+    max-height: 90%;
+    border: thick $accent;
+    background: $surface;
+    padding: 1 2;
+}
+
+.dialog-title {
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.dialog OptionList {
+    height: auto;
+    max-height: 24;
+}
+
+.dialog-buttons {
+    height: auto;
+    margin-top: 1;
+}
+
+.dialog-buttons Button {
+    margin-right: 1;
+}
+
+#status.dialog-status {
+    height: auto;
+}
