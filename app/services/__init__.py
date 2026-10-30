@@ -1,3 +1,3 @@
-from app.services import workspaces
+from app.services import sessions, workspaces
 
-__all__ = ["workspaces"]
+__all__ = ["sessions", "workspaces"]

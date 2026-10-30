@@ -128,6 +128,8 @@ def delete_workspace(workspace_id: str) -> bool:
         logger.exception("Failed dropping collection for %s", ws.id)
     invalidate_workspace(ws.collection_name)
     shutil.rmtree(workspace_dir(ws), ignore_errors=True)
+    # Sessions outlive the sites they searched; they just stop searching this one.
+    get_catalog().detach_workspace(ws.id)
     return get_catalog().delete_workspace(ws.id)
 
 
