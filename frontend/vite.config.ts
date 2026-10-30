@@ -11,6 +11,10 @@ const API_ROUTES = [
   "/models",
   "/workspaces",
   "/jobs",
+  "/sessions",
+  "/messages",
+  "/tools",
+  "/mcp",
   "/docs",
   "/openapi.json",
 ];
