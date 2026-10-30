@@ -40,7 +40,7 @@ export default function NewWorkspaceDialog({
   useEffect(() => {
     if (job?.status === "succeeded" && workspaceId) {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-      navigate(`/w/${workspaceId}/chat`);
+      navigate(`/?site=${workspaceId}`);
       onClose();
     }
   }, [job?.status, workspaceId, navigate, onClose, queryClient]);
