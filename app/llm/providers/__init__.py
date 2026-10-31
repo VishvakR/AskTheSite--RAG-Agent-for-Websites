@@ -1,3 +1,4 @@
 # LLM providers
-from .openai import OpenAIModel
+from .anthropic import AnthropicModel
+from .openai import OpenAICompatibleModel, OpenAIModel
 from .opensource import OpenSourceModel

@@ -32,3 +32,11 @@
 **/values.dev.yaml
 LICENSE
 README.md
+frontend/node_modules
+frontend/dist
+storage
+workspaces
+output
+data
+.pytest_cache
+tests

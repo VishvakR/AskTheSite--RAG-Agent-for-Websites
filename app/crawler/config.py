@@ -1,3 +1,4 @@
+from app.config import get_settings
 from crawl4ai import (
     BrowserConfig,
     CrawlerRunConfig,
@@ -20,9 +21,11 @@ class CrawlConfig:
     ):
         # Configuring the browser is browser config is not provided
         if browser_config is None:
+            # headless must default to True: a visible browser breaks in
+            # Docker and on any headless server.
             self.browser_config = BrowserConfig(
-                headless=False,
-                verbose=True
+                headless=get_settings().crawl_headless,
+                verbose=False,
             )
         else:
             self.browser_config = browser_config

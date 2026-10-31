@@ -11,6 +11,12 @@ experiments/storage/
 experiments/datas/
 test_main.py
 
-cache/
-storage/
+/cache/
+/storage/
 experiments/
+/workspaces/
+.pytest_cache/
+frontend/dist/
+frontend/node_modules/
+askthesite-tui.log
+/exports/

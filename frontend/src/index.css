@@ -1,0 +1,228 @@
+@import "tailwindcss";
+@import "@fontsource-variable/atkinson-hyperlegible-next";
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* Dark mode is driven by a class on <html>, set from localStorage or the
+   system preference, so the user can override it explicitly. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* One source of truth for colour and type. Answers read like annotated text:
+   cool paper, ink, an ink-blue for actions, and a highlighter that is used
+   only for evidence (citations, the grounding meter). */
+@theme {
+  --color-canvas: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-raised: #ffffff;
+  --color-sidebar: #eef0f3;
+  --color-line: #e2e5ea;
+  --color-line-strong: #cdd2da;
+
+  --color-ink: #161a22;
+  --color-body: #343b47;
+  --color-muted: #5a6372;
+  --color-faint: #8b93a1;
+
+  --color-brand: #2140a8;
+  --color-brand-hover: #1a338a;
+  --color-brand-soft: #eef1fb;
+  --color-brand-ring: #c3cdf0;
+
+  /* The highlighter: evidence only. */
+  --color-mark: #f6d64a;
+  --color-mark-soft: #fcf1bf;
+  --color-mark-ink: #5c4a00;
+
+  --color-good: #127a52;
+  --color-good-soft: #e7f5ee;
+  --color-warn: #9a5b00;
+  --color-warn-soft: #fdf3e2;
+  --color-bad: #c2312b;
+  --color-bad-soft: #fcebea;
+
+  /* Per-strategy accents, reused by the Retrieval Lab and the graph. */
+  --color-vec: #2563eb;
+  --color-kw: #c2410c;
+  --color-rank: #7c3aed;
+
+  --font-sans: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4 Variable", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.dark {
+  --color-canvas: #13161b;
+  --color-surface: #1a1e25;
+  --color-raised: #20252d;
+  --color-sidebar: #171a20;
+  --color-line: #2a3039;
+  --color-line-strong: #3a414c;
+
+  --color-ink: #eef1f5;
+  --color-body: #c9cfd8;
+  --color-muted: #8e97a5;
+  --color-faint: #66707e;
+
+  --color-brand: #8ea6ff;
+  --color-brand-hover: #b0c0ff;
+  --color-brand-soft: #1c2440;
+  --color-brand-ring: #34407a;
+
+  --color-mark: #e4c544;
+  --color-mark-soft: #3a3214;
+  --color-mark-ink: #f3de84;
+
+  --color-good: #4cc797;
+  --color-good-soft: #10261d;
+  --color-warn: #e9b24d;
+  --color-warn-soft: #2b2110;
+  --color-bad: #f27b74;
+  --color-bad-soft: #2d1514;
+
+  --color-vec: #6ea0ff;
+  --color-kw: #f2925a;
+  --color-rank: #b18cff;
+}
+
+html {
+  color-scheme: light;
+  background: var(--color-canvas);
+}
+html.dark { color-scheme: dark; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--color-canvas);
+  color: var(--color-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* In the base layer so utilities (border-transparent, outline-none) win. */
+@layer base {
+  *, *::before, *::after { border-color: var(--color-line); }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+::selection { background: var(--color-mark-soft); color: var(--color-ink); }
+
+/* Scrollbars that don't glare in dark mode. */
+* { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Answers: set for reading ─────────────────────────────────────────── */
+
+.reading {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.68;
+  color: var(--color-ink);
+  font-optical-sizing: auto;
+}
+.reading > * + * { margin-top: 0.85em; }
+.reading h1, .reading h2, .reading h3 {
+  font-family: var(--font-sans);
+  font-weight: 650;
+  line-height: 1.3;
+  margin-top: 1.4em;
+}
+.reading h1 { font-size: 1.2rem; }
+.reading h2 { font-size: 1.08rem; }
+.reading h3 { font-size: 1rem; }
+.reading ul { list-style: disc; padding-left: 1.3em; }
+.reading ol { list-style: decimal; padding-left: 1.4em; }
+.reading li + li { margin-top: 0.3em; }
+.reading a { color: var(--color-brand); text-underline-offset: 2px; }
+.reading strong { font-weight: 650; }
+.reading blockquote {
+  border-left: 3px solid var(--color-line-strong);
+  padding-left: 1em;
+  color: var(--color-body);
+}
+.reading code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  padding: 0.05em 0.3em;
+}
+.reading pre {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 0.9em 1em;
+  overflow-x: auto;
+}
+.reading pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+.reading table { border-collapse: collapse; font-family: var(--font-sans); font-size: 0.9rem; }
+.reading th, .reading td { border-bottom: 1px solid var(--color-line); padding: 0.35em 0.7em 0.35em 0; text-align: left; }
+
+/* Citation numerals: a stroke of highlighter, set as a superscript. */
+.cite {
+  font-family: var(--font-sans);
+  font-size: 0.68em;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: super;
+  margin: 0 0.08em;
+  padding: 0.12em 0.32em 0.08em;
+  border-radius: 3px;
+  background: var(--color-mark-soft);
+  color: var(--color-mark-ink);
+  cursor: pointer;
+  transition: background-color 120ms;
+}
+.cite:hover, .cite[data-active="true"] { background: var(--color-mark); color: #2b2200; }
+.cite-missing { background: var(--color-bad-soft); color: var(--color-bad); cursor: help; }
+
+/* The one orchestrated motion: the answer caret while text streams. */
+@keyframes caret-blink { 0%, 100% { opacity: 1 } 50% { opacity: 0 } }
+.animate-caret { animation: caret-blink 1s step-end infinite; }
+.reading.is-streaming > :last-child::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.17em;
+  background: var(--color-ink);
+  animation: caret-blink 1s step-end infinite;
+}
+
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-fade-rise { animation: fade-rise 0.2s ease-out both; }
+
+@keyframes slide-in {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.animate-slide-in { animation: slide-in 0.18s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
