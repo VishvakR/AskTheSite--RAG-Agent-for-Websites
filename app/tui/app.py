@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -199,11 +200,16 @@ class AskTheSiteApp(App):
         lines = [f"[b]{escape(c.get('page_title') or '')}[/b]"]
         if c.get("heading"):
             lines.append(f"[dim]{escape(c['heading'])}[/]")
-        lines.append(f"[link={c.get('source_url', '')}]{escape(c.get('source_url', ''))}[/link]")
+        url = c.get("source_url", "")
+        # Textual markup needs the link target quoted (URLs contain ':').
+        lines.append(f'[link="{url.replace(chr(34), "%22")}"]{escape(url)}[/link]')
         if c.get("workspace_name"):
-            lines.append(f"[dim]site: {escape(c['workspace_name'])} · chunk #{c.get('chunk_index')}[/]")
+            # Negative indexes mark whole-page reads, not chunks.
+            chunk = f" · chunk #{c['chunk_index']}" if (c.get("chunk_index") or 0) >= 0 else ""
+            lines.append(f"[dim]site: {escape(c['workspace_name'])}{chunk}[/]")
         lines.append("")
-        lines.append(escape(c.get("snippet") or ""))
+        snippet = re.sub(r"(^|\s)#{1,6}\s+", r"\1", c.get("snippet") or "")
+        lines.append(escape(snippet))
         self.query_one("#source-detail", Static).update("\n".join(lines))
 
     # ── status line ───────────────────────────────────────────────────────

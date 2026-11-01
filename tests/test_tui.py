@@ -26,7 +26,14 @@ async def test_agent_turn_renders_tools_answer_and_sources(make_workspace):
         assert [b.tool_name for b in turn.query(ToolCallBlock)] == ["search_site"]
         assert turn.steps[-1]._buffer == "Install it with pip [1]."
         assert turn.steps[0].text.has_class("narration") or not turn.steps[0].text.display
-        assert app.query_one("#sources", OptionList).option_count >= 1
+        sources = app.query_one("#sources", OptionList)
+        assert sources.option_count >= 1
+        # Highlighting a source shows its passage and a link to the page.
+        sources.focus()
+        await pilot.press("down")
+        await pilot.pause()
+        detail = str(app.query_one("#source-detail", Static).render())
+        assert "https://ex.dev/" in detail
 
         session = svc.require(app.session.id)
         assert session.mode == "agent" and session.title == "How do I install it?"
