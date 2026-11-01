@@ -56,7 +56,7 @@ function TitleEditor({ session }: { session: Session }) {
       type="button"
       onClick={() => setEditing(true)}
       title="Rename"
-      className="min-w-0 truncate rounded-md px-2 py-0.5 text-left text-[15px] font-semibold text-ink hover:bg-canvas"
+      className="block max-w-full truncate rounded-md px-2 py-0.5 text-left text-[15px] font-semibold text-ink hover:bg-canvas"
     >
       {session.title}
     </button>
@@ -169,7 +169,9 @@ export default function ChatPage() {
   });
 
   const turns: TurnModel[] = useMemo(() => {
-    const stored = detail.data?.turns ?? [];
+    // While a turn streams, the server already holds its question; show the
+    // live copy only, or it appears twice.
+    const stored = (detail.data?.turns ?? []).filter((t) => !live?.turnId || t.turn_id !== live.turnId);
     const cut = replacing ? stored.findIndex((t) => t.turn_id === replacing) : -1;
     const shown = (cut >= 0 ? stored.slice(0, cut) : stored).map(fromStored);
     return live ? [...shown, live] : shown;

@@ -129,8 +129,7 @@ export default function ApiTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-ink">API</h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="text-sm text-muted">
             Every endpoint, runnable against the live server.
           </p>
         </div>

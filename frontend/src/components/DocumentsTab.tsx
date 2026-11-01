@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { api } from "../lib/api";
+import { cleanSnippet } from "../lib/citations";
 import { useJobProgress } from "../lib/useJobProgress";
 import { Badge, Button, Card, EmptyState, ErrorNote, Spinner, cn } from "./ui";
 
@@ -31,7 +32,7 @@ function Stat({
         <div className="text-xl font-semibold leading-tight text-ink">
           {value}
         </div>
-        <div className="text-[11px] uppercase tracking-wide text-muted">
+        <div className="text-[11px] text-muted">
           {label}
         </div>
       </div>
@@ -85,8 +86,7 @@ export default function DocumentsTab() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Documents</h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="text-sm text-muted">
             {ws ? (
               <>
                 Indexed chunks from{" "}
@@ -207,7 +207,7 @@ export default function DocumentsTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-line bg-canvas text-[11px] uppercase tracking-wide text-muted">
+                <tr className="border-b border-line bg-canvas text-[11px] text-muted">
                   <th className="px-4 py-2.5 font-medium">Source</th>
                   <th className="px-4 py-2.5 font-medium">Section</th>
                   <th className="px-4 py-2.5 font-medium">Preview</th>
@@ -242,7 +242,7 @@ export default function DocumentsTab() {
                     </td>
                     <td className="max-w-[28rem] px-4 py-2.5">
                       <span className="block truncate text-xs text-body">
-                        {d.summary}
+                        {cleanSnippet(d.summary)}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs text-muted">

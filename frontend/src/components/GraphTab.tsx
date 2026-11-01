@@ -106,11 +106,7 @@ export default function GraphTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-ink">
-            <Network size={18} className="text-brand" />
-            Knowledge graph
-          </h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="text-sm text-muted">
             Every crawled page, linked by the internal links between them.
             Node size is how many chunks the page contributed; colour is how
             many links it sits from the seed page.
@@ -151,7 +147,7 @@ export default function GraphTab() {
 
         <div className="space-y-3">
           <Card className="p-3">
-            <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-faint">
+            <h3 className="mb-2 text-[13px] font-semibold text-muted">
               Link distance from seed
             </h3>
             <div className="space-y-1.5">
