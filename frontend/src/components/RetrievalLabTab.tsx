@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { FlaskConical, Link2, Search, Zap } from "lucide-react";
 import { api } from "../lib/api";
+import { cleanSnippet } from "../lib/citations";
 import type { CompareResponse, Citation, Engine } from "../lib/types";
 import { Badge, Button, Card, EmptyState, ErrorNote, ScoreBar, cn } from "./ui";
 
@@ -65,11 +66,7 @@ export default function RetrievalLabTab() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-semibold text-ink">
-          <FlaskConical size={18} className="text-brand" />
-          Retrieval Lab
-        </h1>
-        <p className="mt-1 max-w-3xl text-sm text-muted">
+        <p className="max-w-3xl text-sm text-muted">
           Run one question through all three retrieval strategies at once and see
           exactly which chunks each one surfaces, with comparable relevance
           scores. This is the step most RAG apps hide.
@@ -233,7 +230,7 @@ export default function RetrievalLabTab() {
                             )}
                             <ScoreBar score={c.score} tone={tone} />
                             <p className="line-clamp-3 text-[11px] leading-relaxed text-body">
-                              {c.snippet}
+                              {cleanSnippet(c.snippet)}
                             </p>
                           </li>
                         );
