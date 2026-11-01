@@ -16,6 +16,23 @@ such as Claude Desktop.
 
 Everything runs locally by default — no API key required.
 
+![A research answer with its sources open beside it](docs/screenshots/hero.png)
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Research mode mid-answer: reasoning and the searches it ran](docs/screenshots/research-live.png) | ![Hovering a citation shows the passage; the grounding meter flags an uncited claim](docs/screenshots/check.png) |
+| **Research mode** shows its reasoning and every search as it works. | **Check any claim**: hover a citation to read the passage; the meter flags what cites nothing. |
+| ![Dark theme](docs/screenshots/hero-dark.png) | ![Step timeline with timings and token counts](docs/screenshots/steps.png) |
+| **Dark theme**, with the source inspector open. | **Steps**: every model call and tool, with timing and tokens. |
+| ![Retrieval Lab comparing vector, BM25 and rerank](docs/screenshots/lab.png) | ![Link graph of a crawled site](docs/screenshots/graph.png) |
+| **Retrieval Lab**: one question, three strategies, side by side. | **Link graph** of every crawled page. |
+| ![Model settings](docs/screenshots/settings.png) | ![Command palette searching chats and sites](docs/screenshots/palette.png) |
+| **Settings**: pick models, tools and MCP connections. | **⌘K** searches chats, sites and past answers. |
+| ![The terminal app](docs/screenshots/tui.png) | <img src="docs/screenshots/mobile.png" alt="Phone layout" width="260"> |
+| **Terminal app**: `uv run main.py tui`. | **Phone layout.** |
+
 ---
 
 ## What's in it
